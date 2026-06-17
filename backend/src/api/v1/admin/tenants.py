@@ -143,6 +143,7 @@ from platform_layer.tenant.rate_limit_counter import (
     parse_rate_limit_item,
     window_type_for_seconds,
 )
+from platform_layer.transcripts.retention import apply_transcript_retention
 
 router = APIRouter(prefix="/admin/tenants", tags=["admin", "tenants"])
 
@@ -1860,6 +1861,100 @@ async def get_tenant_harness_policy(
     raw = (tenant.meta_data or {}).get("harness_policy")
     stored = raw if isinstance(raw, dict) else {}
     return _project_harness_policy(stored)
+
+
+# =====================================================================
+# Sprint 57.134 — per-tenant transcript retention (apply + preview)
+# Uses the CANONICAL tenants.retention_days SaaS column (Sprint 57.46; settable via
+# PATCH /tenants/{id}) — NO parallel config (Day-0 pivot, avoids the AP-6 parallel-config
+# anti-pattern). The apply POST deletes messages + message_events older than
+# (now - retention_days); the preview GET dry-run COUNTs the same without deleting.
+# =====================================================================
+class TranscriptRetentionApplyResponse(BaseModel):
+    """Outcome of a manual apply-retention run (rows deleted)."""
+
+    retention_days: int
+    cutoff: str
+    deleted_messages: int = 0
+    deleted_events: int = 0
+
+
+class TranscriptRetentionPreviewResponse(BaseModel):
+    """Dry-run preview: the rows an apply WOULD delete (no mutation)."""
+
+    retention_days: int
+    cutoff: str
+    would_delete_messages: int = 0
+    would_delete_events: int = 0
+
+
+@router.get(
+    "/{tenant_id}/transcript-retention/preview",
+    response_model=TranscriptRetentionPreviewResponse,
+)
+async def preview_tenant_transcript_retention(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+    admin_user_id: UUID = Depends(require_admin_platform_role),
+) -> TranscriptRetentionPreviewResponse:
+    """Dry-run: count the messages + message_events an apply would delete (no mutation).
+
+    Reads the tenant's canonical retention_days (tenants.retention_days). Read-only (no
+    audit — GET precedent; no commit). 404 via _load_tenant_or_404.
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+    stats = await apply_transcript_retention(db, tenant_id, tenant.retention_days, dry_run=True)
+    return TranscriptRetentionPreviewResponse(
+        retention_days=tenant.retention_days,
+        cutoff=stats.cutoff.isoformat(),
+        would_delete_messages=stats.messages,
+        would_delete_events=stats.events,
+    )
+
+
+@router.post(
+    "/{tenant_id}/transcript-retention/apply",
+    response_model=TranscriptRetentionApplyResponse,
+)
+async def apply_tenant_transcript_retention(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+    admin_user_id: UUID = Depends(require_admin_platform_role),
+) -> TranscriptRetentionApplyResponse:
+    """Delete the tenant's messages + message_events older than its retention window.
+
+    Reads the tenant's canonical retention_days (tenants.retention_days; default 90,
+    settable via PATCH /tenants/{id}); deletes rows with created_at < (now - retention_days),
+    strictly tenant-scoped + RLS-safe. Audited (with the cutoff + counts). 404 via
+    _load_tenant_or_404.
+    """
+    tenant = await _load_tenant_or_404(db, tenant_id)
+    stats = await apply_transcript_retention(db, tenant_id, tenant.retention_days)
+
+    await append_audit(
+        db,
+        tenant_id=tenant_id,
+        operation="tenant_transcript_retention_apply",
+        resource_type="tenant",
+        resource_id=str(tenant_id),
+        operation_data={
+            "tenant_id": str(tenant_id),
+            "retention_days": tenant.retention_days,
+            "cutoff": stats.cutoff.isoformat(),
+            "deleted_messages": stats.messages,
+            "deleted_events": stats.events,
+        },
+        user_id=admin_user_id,
+        operation_result="success",
+    )
+    await db.commit()
+
+    return TranscriptRetentionApplyResponse(
+        retention_days=tenant.retention_days,
+        cutoff=stats.cutoff.isoformat(),
+        deleted_messages=stats.messages,
+        deleted_events=stats.events,
+    )
 
 
 # =====================================================================
