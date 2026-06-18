@@ -8,6 +8,7 @@
 **Verifier**: 真 UI（Playwright）+ 真後端（uvicorn :8000）+ 真 LLM（Azure gpt-5.2），dan@acme.com / acme-prod
 
 > **Modification History**
+> - 2026-06-18: Add §2.8 — 2 escalate 暫停子能力 drive-through（output-ESCALATE 投遞前暫停 + verification-ESCALATE APPROVE/REJECT-coach；Sprint 57.93 / 57.99 A2）
 > - 2026-06-18: Initial — 彙整 6 個 scenario（python_sandbox 修復 / subagent / verification self-correct / HITL / handoff / mid-run injection / long-run + compaction）
 
 ---
@@ -30,6 +31,8 @@
 | Mid-run injection | 1×12 | ✅ 驗證為真 | run 中 `POST /inject` → 在 turn 邊界 drain → agent 採納 |
 | Long-run 自主任務 | all | ✅ 驗證為真 | 多工具 + 2 subagent + 報告，`verification 0.98` |
 | **Context compaction 實際壓縮** | 4 | ✅ 驗證為真 | 多 send 後 `messages_compacted=12`，token `4477→1649`（−63%） |
+| **Output-ESCALATE 投遞前暫停**（57.93） | 9→1 | ✅ 驗證為真 | 答案含 escalate 詞 → 投遞前 `awaiting_approval` → Approve → `_replay_approved_output` 投遞 |
+| **Verification-ESCALATE 暫停**（57.99 A2） | 10→9→1 | ✅ 驗證為真（兩分支） | judge 連 3 失敗 `failed_max` → 人工暫停；**APPROVE** 照原樣投遞 / **REJECT-coach** 一次教練輪 |
 
 **本系列共發現並修復 1 個真實 bug（FIX-033，已 merged PR #319）**；其餘子能力皆已正確接線且可用，非 Potemkin。
 
@@ -99,6 +102,29 @@ chat 有 spec-only `handoff` trigger tool（Sprint 57.107 B3，policy-gated `han
 - **Send 3（多 send + rehydration，≥3 user turns）**：**真壓縮 `messages_compacted=12`，tokens `4477→1649`（−63%，省 2828）**。
 - **壓縮後連續性保持**：follow-up 正確答出 Day4=920 最差（超均 ~701ms）、排除 spike 後 mean ≈147.6（=(3497-920-510)/14 ✓）。
 
+### 2.8 兩個 ESCALATE 暫停點（Sprint 57.93 / 57.99 A2）
+
+§2.4 驗的是 **tool**-HITL 暫停（工具呼叫前 ESCALATE）。loop 另有兩個暫停點 —— **output**-ESCALATE（投遞前）與 **verification**-ESCALATE（max-fail 後）—— 本輪逐一 drive-through。兩者都走同一套 deferred-HITL pause-resume 機制（checkpoint + `ApprovalRequested` + `stop=awaiting_approval`），但觸發點與 resume 語意不同。截圖：`agent-loop-escalate-drivethrough-20260618/`。
+
+**(a) Output-ESCALATE 投遞前暫停（57.93，`OutputKeywordEscalationGuardrail`，priority 5 OUTPUT chain）**
+- Lever：`PUT harness-policy {escalate_output_phrases:["paris"], verification_mode:"disabled"}`（隔離，事後還原）
+- Prompt：「法國首都，回一個小寫字」→ agent 產 `paris`
+- 在 `LLMResponded` 渲染**之前**：`approval_requested risk=HIGH` → `state_checkpointed{version:1}` → `loop_end stop=awaiting_approval turns=0`
+- HITL 卡片決定性證據：**Rationale =「output matched escalation phrase: 'paris'」**、`tool: —`（無工具 → 確認是 output guardrail，非 tool-HITL、非 verification）、approval_id `43c71d83`
+- 按 **Approve & continue** → resume → held 答案 `paris` 經 `_replay_approved_output` 投遞、`stop: end_turn`、卡片 `Decision: APPROVED`
+- 截圖 `dt-output-escalate-01-pause` / `02-approved-delivered`
+
+**(b) Verification-ESCALATE 暫停（57.99 A2，`_cat10_verification_escalate_pause`）**
+- Lever：`PUT harness-policy {verification_mode:"enabled", verification_judge_template:"pii_leak_check", verification_escalate_on_max:true, escalate_output_phrases:[]}`
+- 觸發設計：judge 只看 output（無 trace），且 `pii_leak_check` 連 placeholder 都判 PII（"present as placeholders indicating PII types"）。要讓 agent **3 次全失敗**（`attempt>=max_correction_attempts=2` → `failed_max`），用「每行強制含 name/email/phone 三欄、缺欄/placeholder 皆無效」的 prompt → agent 無論用擬真值或 placeholder 都被判 PII，無「移除識別碼」的逃逸路徑。input 不放字面 PII（否則被 input-PII guardrail `guardrail_blocked`）。
+- 事件流：3× `verification_failed`（attempt 0 擬真值 → attempt 1 placeholder 仍判 PII → attempt 2）→ `approval_requested` → `loop_end stop=awaiting_approval turns=2`；Inspector `TURN 3 · AWAITING_APPROVAL`、`claim failed · llm_judge`；卡片 **`kind: verification`**（決定性，非 tool/output）、approval_id `ff820bd9`
+- **分支 1 — APPROVE（deliver-as-is，人工覆蓋 judge，無 LLM 重呼叫）**：held 失敗答案（`[NAME] | [EMAIL] | [PHONE]` 三行）原樣投遞、`Decision: APPROVED`、`stop: end_turn`。截圖 `dt-verification-escalate-01-pause` / `02-approved-deliver-as-is`
+- **分支 2 — REJECT-coach（一次人工教練輪）**：另起一輪觸發升級後按 **Reject** → 展開「Coaching note」textbox +「Reject & coach」鈕（兩步）→ 填教練筆記「停止產生聯絡資料、只回 OK」→ `approval_received decision=REJECTED` → 筆記 re-inject 為**一次** coached turn → agent 回 `OK` → `verification_passed` → `loop_end stop=end_turn turns=2`、`TURN 4 · END_TURN`。durable `verification_escalated=True` 綁定：若 coached turn 再失敗則走 A1 終止、**無第 2 次暫停**。截圖 `dt-verification-escalate-03-reject-coach-one-turn`
+
+**非確定性誠實註記**：verification-ESCALATE 依賴 real-LLM 連 3 次失敗，**非 100% 確定**（同一 prompt 一輪 3 失敗升級、另一輪 agent 在 attempt 1 即 redact 通過 → 不升級；與 57.132 retro「output-escalate 非確定性」一致）。「每行強制三欄」prompt 顯著提高 3-fail 命中率，但仍需偶爾重試。對比之下 **output-ESCALATE 是確定性的**（escalate 詞必出現即觸發）。
+
+**附帶驗證**：input 放字面 email/phone → input-PII guardrail（`PII suspected:['email'] route to HITL` / 或直接 `guardrail_blocked`）—— 另一個 Cat 9 入口暫停，本輪順帶實證。
+
 ---
 
 ## 3. 對「能否像 CC 長時間運行」的誠實評估（code-grounded）
@@ -121,7 +147,8 @@ chat 有 spec-only `handoff` trigger tool（Sprint 57.107 B3，policy-gated `han
 - 真 UI：Playwright 開 `http://localhost:3007/chat-v2`，dev-login dan@acme.com（admin / acme-prod）
 - 真後端 :8000（uvicorn `api.main:app`）、真 LLM Azure gpt-5.2、mode=`real_llm`（非 echo_demo）
 - 治理 lever（皆 per-request 生效、事後還原）：
-  - verification：`PUT /api/v1/admin/tenants/{id}/harness-policy` `{verification_judge_template}`
+  - verification：`PUT /api/v1/admin/tenants/{id}/harness-policy` `{verification_mode, verification_judge_template, verification_escalate_on_max}`
+  - escalate 暫停詞：同 endpoint `{escalate_output_phrases, escalate_input_phrases, escalate_between_turns_phrases, escalate_tools}`（空 `[]` = 顯式關閉該詞表）
   - HITL：`PUT /api/v1/admin/tenants/{id}/hitl-policies` `{auto_approve_max_risk, require_approval_min_risk}`
   - compaction：env `CHAT_COMPACTION_TOKEN_BUDGET` / `CHAT_COMPACTION_KEEP_RECENT_TURNS`（**需重啟後端**）
 - 證據抓取：`browser_evaluate` 讀 transcript innerText/innerHTML（event 流含 `verification_failed` / `message_injected` / compaction `tokens_before/after` / `agent_handoff` 等）
@@ -130,6 +157,7 @@ chat 有 spec-only `handoff` trigger tool（Sprint 57.107 B3，policy-gated `han
 ### 還原清單（本系列結束時皆已執行）
 - HITL policy → 基準（LOW:auto / MEDIUM+:always_ask）
 - verification judge → 預設（null → `output_quality`）
+- harness-policy escalate override（§2.8）→ 全 null（PUT all-null，escalate_output_phrases / verification_* 皆回預設）
 - compaction env → 移除（重啟後端回預設 100k budget，PID 48688）
 - 前端 :3007 全程未動
 
