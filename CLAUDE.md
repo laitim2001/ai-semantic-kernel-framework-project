@@ -115,6 +115,14 @@ V2 嚴格按以下範疇組織代碼，**禁止跨範疇雜湊**：
 
 完整定義見 `agent-harness-planning/01-eleven-categories-spec.md`。
 
+### Agent Loop 能力現況（drive-through 驗證，2026-06-18）
+
+chat-v2 主流量上，下列 agent loop 子能力已**實機 drive-through 驗證**（真 UI + 真後端 + 真 LLM，非僅 gate/curl）：工具執行（python_sandbox via Docker）/ subagent 任務分解（fork）/ verification self-correction / HITL pause-resume / handoff / mid-run injection / context compaction 實際壓縮。皆已正確接線、非 Potemkin。
+
+**長運行的真實邊界（架構事實，非缺陷）**：chat real_llm loop 單次 send 上限 **`max_turns=8`**（不是 CC 式單次無界 run）。「長時間運行」靠**多次有界爆發 + 跨輪 rehydration（Cat 3 memory，Sprint 57.127）+ compaction**達成；compaction 僅在 **≥3 user turns** 時實際壓縮（預設 75k 門檻正常聊天不觸發，env `CHAT_COMPACTION_TOKEN_BUDGET` 為 drive-through lever）。任務為本靠「對話式 loop + 工具 + subagent 分解」，無 CC 式 TodoWrite 顯式 task primitive。屬有意的伺服器端可治理設計。
+
+完整證據與數字：`claudedocs/5-status/chat-v2-agent-loop-capability-drivethrough-20260618.md`。
+
 ---
 
 ## V2 五大核心約束（必守）
