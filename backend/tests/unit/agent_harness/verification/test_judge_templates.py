@@ -47,12 +47,38 @@ def test_load_template_missing_raises_file_not_found() -> None:
         "format_compliance",
         "safety_review",
         "pii_leak_check",
+        "key_condition",
     ],
 )
 def test_all_default_templates_load_and_have_placeholder(name: str) -> None:
     content = load_template(name)
     assert "{output}" in content, f"Template '{name}' missing {{output}} placeholder"
     assert "JSON" in content, f"Template '{name}' should request JSON response"
+
+
+def test_key_condition_template_extracts_per_task_conditions() -> None:
+    """Sprint 57.138 (AD-Verification-KeyCondition-PerTask): the key_condition judge
+    extracts the request's must-satisfy conditions (count / format / ordering / unit /
+    inclusion) and checks each — a superset of the generic output_quality floor."""
+    from agent_harness.verification.templates import list_templates
+
+    assert "key_condition" in list_templates(), "key_condition must be a shipped template"
+    content = load_template("key_condition")
+    lowered = content.lower()
+    # both placeholders → composes with the A3 trace-aware judge (no judge code change)
+    assert "{output}" in content and "{trace}" in content
+    assert "json" in lowered
+    # per-task condition extraction (the refinement over the generic 5-failure-mode list)
+    assert "condition" in lowered, "key_condition must extract per-task conditions"
+    for axis in ("count", "format", "ordering"):
+        assert axis in lowered, f"key_condition template missing the '{axis}' condition axis"
+    # strict superset: keeps the generic usability floor
+    for crit in ("refus", "incoherent", "empty", "off-topic"):
+        assert crit in lowered, f"key_condition template missing usability-floor criterion '{crit}'"
+    # false-positive guard (the over-flag risk) + default-pass bias
+    assert "do not invent" in lowered, "key_condition must guard against invented conditions"
+    assert "passed=true" in lowered or "passed = true" in lowered
+    assert "when in doubt, pass" in lowered
 
 
 def test_output_quality_template_is_clear_failure_only() -> None:
