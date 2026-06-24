@@ -1,0 +1,105 @@
+# Golden corpus for the key-condition A/B benchmark (Sprint 57.138, research #8).
+#
+# Two classes:
+#   instruction_violation — the request imposes a PRECISE condition (count / format /
+#                           ordering / unit / inclusion) and the output VIOLATES it.
+#                           The answer is coherent / on-topic / non-empty, so the GENERIC
+#                           output_quality judge passes it (its blind spot); the
+#                           key_condition judge SHOULD catch it. expected_passed: false
+#   acceptable            — the output meets every clearly-imposed condition (or no
+#                           specific condition is imposed). BOTH judges should pass.
+#                           Includes over-flag traps (terse-but-correct, verbose-but-
+#                           compliant) to measure the key_condition false-positive rate.
+#                           expected_passed: true
+#
+# Each instruction_violation case carries a `trace` with the constraining user request so
+# the key_condition judge can extract the condition (it reads {trace}).
+#
+# Consumed by: backend/scripts/benchmark_key_condition.py :: load_cases
+
+cases:
+  # ---- instruction_violation (6) — generic-blind, key_condition SHOULD fail ----
+  - id: kc-iv-01-count
+    class: instruction_violation
+    expected_passed: false
+    trace:
+      - role: user
+        content: "List exactly 3 programming languages."
+    output: "Python, JavaScript, Go, Rust, and Java."
+  - id: kc-iv-02-oneword
+    class: instruction_violation
+    expected_passed: false
+    trace:
+      - role: user
+        content: "Answer in one word: is water wet?"
+    output: >
+      Well, it depends on how you define wetness, but in common usage most people would
+      say that yes, water can be considered wet.
+  - id: kc-iv-03-ordering
+    class: instruction_violation
+    expected_passed: false
+    trace:
+      - role: user
+        content: "Sort these numbers in ascending order: 5, 2, 9, 1."
+    output: "5, 9, 2, 1"
+  - id: kc-iv-04-unit
+    class: instruction_violation
+    expected_passed: false
+    trace:
+      - role: user
+        content: "What is the boiling point of water at sea level? Include the unit."
+    output: "100"
+  - id: kc-iv-05-json
+    class: instruction_violation
+    expected_passed: false
+    trace:
+      - role: user
+        content: 'Return the answer as JSON with a "capital" key. What is the capital of Japan?'
+    output: "The capital of Japan is Tokyo."
+  - id: kc-iv-06-inclusion
+    class: instruction_violation
+    expected_passed: false
+    trace:
+      - role: user
+        content: "Name two EU member states AND include each one's capital city."
+    output: "France and Germany."
+
+  # ---- acceptable (5) — meets the conditions (or none imposed); BOTH should pass ----
+  - id: kc-ok-01-count-met
+    class: acceptable
+    expected_passed: true
+    trace:
+      - role: user
+        content: "List exactly 3 programming languages."
+    output: "Python, JavaScript, and Go."
+  - id: kc-ok-02-terse
+    class: acceptable
+    expected_passed: true
+    trace:
+      - role: user
+        content: "Answer in one word: is the sky blue?"
+    output: "Yes."
+  - id: kc-ok-03-json-met
+    class: acceptable
+    expected_passed: true
+    trace:
+      - role: user
+        content: 'Return the answer as JSON with a "capital" key. What is the capital of Japan?'
+    output: '{"capital": "Tokyo"}'
+  - id: kc-ok-04-verbose-compliant
+    class: acceptable
+    expected_passed: true
+    trace:
+      - role: user
+        content: "Explain what a variable is in programming."
+    output: >
+      A variable is a named container that stores a value in a program. You give it a name
+      and assign it a value, and you can read or change that value later by referring to the
+      name. For example, in Python `count = 5` creates a variable named `count` holding 5.
+  - id: kc-ok-05-no-condition
+    class: acceptable
+    expected_passed: true
+    trace:
+      - role: user
+        content: "What is the capital of France?"
+    output: "The capital of France is Paris."
