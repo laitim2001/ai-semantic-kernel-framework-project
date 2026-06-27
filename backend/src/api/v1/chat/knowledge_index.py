@@ -25,6 +25,8 @@ Created: 2026-06-27 (Sprint 57.146)
 Last Modified: 2026-06-27
 
 Modification History (newest-first):
+    - 2026-06-27: Sprint 57.147 — pass docs_root (not a single connector) so the index
+      resolves per-tenant corpus/collection at search time (per-tenant isolation Slice 3a)
     - 2026-06-27: Initial creation (Sprint 57.146) — vector-index composition singleton
       (AD-Knowledge-Connector-First-Real-Source Slice 2)
 
@@ -80,7 +82,11 @@ def get_knowledge_vector_index() -> "KnowledgeVectorIndex | None":
         )
         return None
     try:
-        connector = LocalDocsConnector(settings.knowledge_docs_root)
+        # Validate the base root exists (raises ValueError otherwise) before building
+        # the index. Sprint 57.147: the index resolves a PER-TENANT connector at
+        # ingest/search time (<root>/<tenant_id>/ or the shared root), so it takes the
+        # base root rather than a single connector.
+        LocalDocsConnector(settings.knowledge_docs_root)
     except ValueError:
         logger.warning("knowledge docs root missing; vector index disabled")
         return None
@@ -88,7 +94,7 @@ def get_knowledge_vector_index() -> "KnowledgeVectorIndex | None":
     _singleton = KnowledgeVectorIndex(
         AzureOpenAIEmbeddingClient(config),
         QdrantVectorStore(settings.qdrant_url),
-        connector,
+        settings.knowledge_docs_root,
     )
     logger.info("knowledge vector index built (model=%s)", config.deployment_embedding)
     return _singleton

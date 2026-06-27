@@ -9,18 +9,21 @@ Description:
     Cat 2 tool. `knowledge_search` is read-only (LOW risk, AUTO hitl) so the
     registry-derived permission matrix auto-passes it — the agent searches the
     company docs folder freely and grounds answers in real snippets with source
-    paths. Single-arity handler (no DB write → no ExecutionContext), mirroring
-    the business-domain handler shape.
+    paths. Dual-arity handler (ToolCall, ExecutionContext) so it reads the
+    server-authoritative tenant_id for per-tenant vector isolation (Sprint 57.147;
+    mirrors memory_search), with an LLM-forged-scope guard.
 
 Key Components:
     - KNOWLEDGE_SEARCH_SPEC: the ToolSpec (mirrors MEMORY_SEARCH_SPEC shape)
-    - make_knowledge_search_handler(): builds a (ToolCall) -> str handler
+    - make_knowledge_search_handler(): builds a (ToolCall, ExecutionContext) -> str handler
     - register_knowledge_tools(): registers spec + handler over a docs root
 
 Created: 2026-06-26 (Sprint 57.145)
 Last Modified: 2026-06-27
 
 Modification History (newest-first):
+    - 2026-06-27: Sprint 57.147 — dual-arity handler + forgery guard + thread context.tenant_id
+      to per-tenant vector search (AD-Knowledge-Connector-RBAC-Citation-Slice3 isolation half)
     - 2026-06-27: Sprint 57.146 — opt-in vector_index (semantic-primary, keyword fail-soft fallback)
     - 2026-06-26: Initial creation (Sprint 57.145) — first real connector tool
       (AD-Knowledge-Connector-First-Real-Source)
@@ -35,10 +38,12 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from agent_harness._contracts import (
     ConcurrencyPolicy,
+    ExecutionContext,
     RiskLevel,
     ToolAnnotations,
     ToolCall,
@@ -53,6 +58,48 @@ if TYPE_CHECKING:
     from .vector_index import KnowledgeVectorIndex
 
 logger = logging.getLogger(__name__)
+
+# Reserved scope arg names the LLM is NOT allowed to set — they come from the
+# server-authoritative ExecutionContext (JWT-derived), never the tool call.
+_RESERVED_SCOPE_KEYS = ("tenant_id", "user_id", "session_id")
+
+
+def _reject_forged_scope(args: dict[str, Any], context: ExecutionContext) -> str | None:
+    """Return an error string if any reserved scope arg disagrees with the context, else None.
+
+    Mirrors memory_tools._detect_forged_scope_args (Sprint 52.5 W4P-4): tenant_id /
+    user_id / session_id are server-authoritative. The knowledge_search schema does
+    not declare these properties, but JSONSchema additionalProperties is permissive,
+    so an LLM could still smuggle a tenant_id into arguments — this guard refuses a
+    supplied value that disagrees with (or is supplied when absent from) the context.
+    Tolerant: omitted keys / empty values / a value EQUAL to the context are allowed.
+    """
+    ctx_view = {
+        "tenant_id": context.tenant_id,
+        "user_id": context.user_id,
+        "session_id": context.session_id,
+    }
+    for key in _RESERVED_SCOPE_KEYS:
+        if key not in args:
+            continue
+        raw = args[key]
+        if raw is None or raw == "":
+            continue
+        try:
+            supplied = UUID(str(raw))
+        except (ValueError, AttributeError):
+            return (
+                f"argument '{key}' is not a valid scope id; scope comes from "
+                "ExecutionContext, not the tool call"
+            )
+        expected = ctx_view[key]
+        if expected is None or supplied != expected:
+            return (
+                f"argument '{key}' disagrees with ExecutionContext "
+                "(refusing potentially forged tenant scope)"
+            )
+    return None
+
 
 KNOWLEDGE_SEARCH_SPEC: ToolSpec = ToolSpec(
     name="knowledge_search",
@@ -92,16 +139,27 @@ def make_knowledge_search_handler(
     connector: LocalDocsConnector,
     vector_index: "KnowledgeVectorIndex | None" = None,
 ) -> ToolHandler:
-    """Build a single-arity (ToolCall) -> str handler over a real docs connector.
+    """Build a dual-arity (ToolCall, ExecutionContext) -> str handler over a real docs connector.
 
-    Sprint 57.146: when a vector_index is supplied the handler retrieves by
-    semantic similarity (embedding + Qdrant); on ANY embedding/Qdrant error it
-    fails soft to the keyword connector so the tool never goes dark. None →
-    57.145 keyword behavior, byte-identical.
+    Sprint 57.147: the handler is dual-arity so it reads the server-authoritative
+    tenant_id from the ExecutionContext (JWT-derived, threaded by the loop) and
+    passes it into the per-tenant vector search — each tenant's agent retrieves
+    ONLY its own collection. An LLM-supplied tenant scope arg that disagrees with
+    the context is refused (forgery guard). The keyword fail-soft path stays shared
+    (tenant_id is not applied there — documented limitation; keyword is the degraded
+    fallback).
+
+    Sprint 57.146: when a vector_index is supplied the handler retrieves by semantic
+    similarity (embedding + Qdrant); on ANY embedding/Qdrant error it fails soft to
+    the keyword connector so the tool never goes dark. vector_index None → keyword
+    behavior (shared root).
     """
 
-    async def handler(call: ToolCall) -> str:
+    async def handler(call: ToolCall, context: ExecutionContext) -> str:
         args = dict(call.arguments)
+        forge = _reject_forged_scope(args, context)
+        if forge is not None:
+            return json.dumps({"hits": [], "count": 0, "error": forge})
         query = str(args.get("query", "")).strip()
         top_k_raw = args.get("top_k", 5)
         try:
@@ -113,7 +171,7 @@ def make_knowledge_search_handler(
         hits: list[KnowledgeHit]
         if vector_index is not None:
             try:
-                hits = await vector_index.search(query, top_k=top_k)
+                hits = await vector_index.search(query, top_k=top_k, tenant_id=context.tenant_id)
             except Exception:  # noqa: BLE001 — fail-soft to keyword on embedding/Qdrant error
                 logger.warning(
                     "knowledge_search vector path failed; falling back to keyword",

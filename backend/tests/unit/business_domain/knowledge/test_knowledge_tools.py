@@ -1,6 +1,7 @@
 """
 File: backend/tests/unit/business_domain/knowledge/test_knowledge_tools.py
-Purpose: Unit tests for knowledge_search ToolSpec + register_knowledge_tools (Sprint 57.145).
+Purpose: Unit tests for knowledge_search ToolSpec + register_knowledge_tools
+         (Sprint 57.145 base + 57.146 vector + 57.147 dual-arity per-tenant).
 Category: Tests
 Created: 2026-06-26
 """
@@ -10,10 +11,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 import pytest
 
-from agent_harness._contracts import RiskLevel, ToolCall, ToolHITLPolicy
+from agent_harness._contracts import ExecutionContext, RiskLevel, ToolCall, ToolHITLPolicy
 from agent_harness.tools import ToolHandler, ToolRegistryImpl
 from business_domain.knowledge import (
     KNOWLEDGE_SEARCH_SPEC,
@@ -45,6 +47,8 @@ def test_spec_params_all_described() -> None:
     props = s.input_schema["properties"]
     assert s.input_schema["required"] == ["query"]
     assert all(props[k].get("description") for k in props)
+    # 57.147: the schema must NOT advertise scope args — they come from ExecutionContext.
+    assert "tenant_id" not in props
 
 
 @pytest.mark.asyncio
@@ -52,7 +56,8 @@ async def test_handler_returns_real_snippets(tmp_path: Path) -> None:
     _write(tmp_path, "guide.md", "# Guide\nthe magic keyword lives here")
     handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path))
     out = await handler(
-        ToolCall(id="t1", name="knowledge_search", arguments={"query": "magic keyword"})
+        ToolCall(id="t1", name="knowledge_search", arguments={"query": "magic keyword"}),
+        ExecutionContext(),
     )
     payload = json.loads(out)
     assert payload["count"] == 1
@@ -66,7 +71,9 @@ async def test_handler_returns_real_snippets(tmp_path: Path) -> None:
 async def test_handler_empty_query(tmp_path: Path) -> None:
     _write(tmp_path, "a.md", "content")
     handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path))
-    out = await handler(ToolCall(id="t2", name="knowledge_search", arguments={"query": ""}))
+    out = await handler(
+        ToolCall(id="t2", name="knowledge_search", arguments={"query": ""}), ExecutionContext()
+    )
     assert json.loads(out)["count"] == 0
 
 
@@ -75,7 +82,8 @@ async def test_handler_invalid_top_k_falls_back(tmp_path: Path) -> None:
     _write(tmp_path, "a.md", "apple pie recipe")
     handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path))
     out = await handler(
-        ToolCall(id="t3", name="knowledge_search", arguments={"query": "apple", "top_k": "oops"})
+        ToolCall(id="t3", name="knowledge_search", arguments={"query": "apple", "top_k": "oops"}),
+        ExecutionContext(),
     )
     assert json.loads(out)["count"] == 1  # bad top_k → default 5, still returns the hit
 
@@ -97,13 +105,15 @@ def test_register_missing_root_raises(tmp_path: Path) -> None:
 
 
 class _FakeVectorIndex:
-    """Stand-in for KnowledgeVectorIndex.search (Sprint 57.146)."""
+    """Stand-in for KnowledgeVectorIndex.search (Sprint 57.146 + 57.147 tenant_id)."""
 
     def __init__(self, hits: list[KnowledgeHit] | None = None, *, raises: bool = False) -> None:
         self._hits = hits or []
         self._raises = raises
+        self.last_tenant_id: Any = "UNSET"
 
-    async def search(self, query: str, top_k: int = 5) -> list[KnowledgeHit]:
+    async def search(self, query: str, top_k: int = 5, tenant_id: Any = None) -> list[KnowledgeHit]:
+        self.last_tenant_id = tenant_id
         if self._raises:
             raise RuntimeError("qdrant down")
         return self._hits
@@ -116,7 +126,10 @@ async def test_handler_uses_vector_index_when_present(tmp_path: Path) -> None:
         [KnowledgeHit(source="vec.md", snippet="semantic section body", score=0.91)]
     )
     handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path), cast(Any, fake))
-    out = await handler(ToolCall(id="v1", name="knowledge_search", arguments={"query": "anything"}))
+    out = await handler(
+        ToolCall(id="v1", name="knowledge_search", arguments={"query": "anything"}),
+        ExecutionContext(),
+    )
     payload = json.loads(out)
     assert payload["count"] == 1
     assert payload["hits"][0]["source"] == "vec.md"  # vector result, NOT keyword kw.md
@@ -129,8 +142,65 @@ async def test_handler_fails_soft_to_keyword_on_vector_error(tmp_path: Path) -> 
     fake = _FakeVectorIndex(raises=True)
     handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path), cast(Any, fake))
     out = await handler(
-        ToolCall(id="v2", name="knowledge_search", arguments={"query": "keyword fallback"})
+        ToolCall(id="v2", name="knowledge_search", arguments={"query": "keyword fallback"}),
+        ExecutionContext(),
     )
     payload = json.loads(out)
     assert payload["count"] == 1
     assert payload["hits"][0]["source"] == "kw.md"  # fell back to the keyword connector
+
+
+# --- Sprint 57.147: dual-arity threads tenant_id; forgery guard rejects LLM scope ---
+
+
+@pytest.mark.asyncio
+async def test_handler_threads_context_tenant_to_vector_index(tmp_path: Path) -> None:
+    _write(tmp_path, "kw.md", "x")
+    fake = _FakeVectorIndex([KnowledgeHit(source="vec.md", snippet="s", score=0.9)])
+    handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path), cast(Any, fake))
+    tid = uuid4()
+    await handler(
+        ToolCall(id="v3", name="knowledge_search", arguments={"query": "anything"}),
+        ExecutionContext(tenant_id=tid),
+    )
+    assert fake.last_tenant_id == tid  # server-authoritative tenant_id passed to the index
+
+
+@pytest.mark.asyncio
+async def test_handler_rejects_forged_tenant_arg(tmp_path: Path) -> None:
+    _write(tmp_path, "kw.md", "x")
+    fake = _FakeVectorIndex([KnowledgeHit(source="vec.md", snippet="s", score=0.9)])
+    handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path), cast(Any, fake))
+    ctx_tid = uuid4()
+    forged_tid = uuid4()
+    out = await handler(
+        ToolCall(
+            id="v4",
+            name="knowledge_search",
+            arguments={"query": "anything", "tenant_id": str(forged_tid)},
+        ),
+        ExecutionContext(tenant_id=ctx_tid),
+    )
+    payload = json.loads(out)
+    assert payload["count"] == 0
+    assert "error" in payload  # forged tenant scope refused
+    assert fake.last_tenant_id == "UNSET"  # the vector index was never called
+
+
+@pytest.mark.asyncio
+async def test_handler_allows_matching_tenant_arg(tmp_path: Path) -> None:
+    """A tenant_id arg that EQUALS the context is tolerated (some callers re-pass it)."""
+    _write(tmp_path, "kw.md", "x")
+    fake = _FakeVectorIndex([KnowledgeHit(source="vec.md", snippet="s", score=0.9)])
+    handler = make_knowledge_search_handler(LocalDocsConnector(tmp_path), cast(Any, fake))
+    tid = uuid4()
+    out = await handler(
+        ToolCall(
+            id="v5",
+            name="knowledge_search",
+            arguments={"query": "anything", "tenant_id": str(tid)},
+        ),
+        ExecutionContext(tenant_id=tid),
+    )
+    assert json.loads(out)["count"] == 1
+    assert fake.last_tenant_id == tid
