@@ -34,6 +34,7 @@ Created: 2026-04-29 (Sprint 49.3 Day 2.3)
 Last Modified: 2026-06-30
 
 Modification History:
+    - 2026-06-30: Sprint 57.151 — MemorySessionSummary += updated_at (rolling-summary recency)
     - 2026-06-30: Sprint 57.150 — add dedup_key + uq_memory_user_dedup (write-side upsert)
     - 2026-06-04: Sprint 57.76 — add MemoryOp (append-only memory_ops ops log)
     - 2026-04-29: Initial creation (Sprint 49.3 Day 2.3)
@@ -321,6 +322,14 @@ class MemorySessionSummary(Base):
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    # Rolling-summary refresh time (Sprint 57.151). A session's summary is upserted
+    # after every send (DBSessionSummaryStore.upsert_summary); recent_for_user orders
+    # by this DESC so cross-session recall surfaces the most-recently-active sessions.
+    # Additive (migration 0033, backfill = created_at). The designed schema (09.md
+    # L481-498) had created_at only.
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 

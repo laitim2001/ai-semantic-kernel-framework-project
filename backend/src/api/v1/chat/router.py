@@ -436,9 +436,15 @@ async def chat(
     # flag on — its presence in _stream_loop_events IS the gate. echo_demo /
     # flag-off / missing Azure env / no db-session-tenant → None → the hook is a
     # no-op (byte-identical to 57.148).
+    # Sprint 57.151: the post-send hook now serves BOTH auto-extract (57.149) and
+    # session summary (57.151), each independently gated inside the builder. Build
+    # the ctx when EITHER flag is on; None (both off / echo / missing env) → no-op.
     memory_extract_ctx: ChatMemoryExtractContext | None = (
         build_chat_memory_extractor(model_policy, db, session_id, current_tenant)
-        if (req.mode == "real_llm" and settings.chat_memory_auto_extract)
+        if (
+            req.mode == "real_llm"
+            and (settings.chat_memory_auto_extract or settings.chat_session_summary)
+        )
         else None
     )
 
@@ -677,38 +683,48 @@ async def _maybe_auto_extract(
     session_id: UUID,
     trace_context: TraceContext,
 ) -> None:
-    """Sprint 57.149 (AD-Memory-Formation-Auto-Extract): the post-completion
-    Option-B deterministic extraction body. Runs as a Starlette BackgroundTask
-    AFTER the SSE response body is fully sent (OUTSIDE the streaming generator,
-    so a client disconnect can't make the generator ignore GeneratorExit).
+    """Post-completion memory formation body (Sprint 57.149 auto-extract +
+    Sprint 57.151 session summary). Runs as a Starlette BackgroundTask AFTER the
+    SSE response body is fully sent (OUTSIDE the streaming generator, so a client
+    disconnect can't make the generator ignore GeneratorExit).
 
-    No-op unless an extract context is wired (the router builds it only for
-    real_llm + CHAT_MEMORY_AUTO_EXTRACT on) AND a user is known. Loads the
-    session ledger, reads existing facts via profile() for prompt-level dedup,
-    then runs the cheap-tier extractor. BEST-EFFORT: any failure is logged +
-    swallowed — memory formation must NEVER surface to the user.
+    Loads the session ledger ONCE and runs whichever post-send features are wired
+    (each gated inside build_chat_memory_extractor):
+      - auto-extract (57.149): durable user facts → UserLayer. Needs a known user
+        (skipped for an anon trace); reads existing facts via profile() for dedup.
+      - session summary (57.151): a rolling per-session conversation summary →
+        memory_session_summary (keyed by session_id; no user_id needed).
+    BEST-EFFORT: any failure is logged + swallowed — memory formation must NEVER
+    surface to the user.
     """
-    if memory_extract_ctx is None or trace_context.user_id is None:
+    if memory_extract_ctx is None:
         return
     try:
         ledger = await memory_extract_ctx.message_store.load()
         if not ledger:
             return
-        known_hints = await memory_extract_ctx.retrieval.profile(
-            tenant_id=tenant_id, user_id=trace_context.user_id
-        )
-        known_facts = [h.summary for h in known_hints if h.summary]
-        await memory_extract_ctx.extractor.extract_session_to_user(
-            session_id=session_id,
-            tenant_id=tenant_id,
-            user_id=trace_context.user_id,
-            messages=ledger,
-            known_facts=known_facts,
-            trace_context=trace_context,
-        )
+        if memory_extract_ctx.extractor is not None and trace_context.user_id is not None:
+            known_hints = await memory_extract_ctx.retrieval.profile(
+                tenant_id=tenant_id, user_id=trace_context.user_id
+            )
+            known_facts = [h.summary for h in known_hints if h.summary]
+            await memory_extract_ctx.extractor.extract_session_to_user(
+                session_id=session_id,
+                tenant_id=tenant_id,
+                user_id=trace_context.user_id,
+                messages=ledger,
+                known_facts=known_facts,
+                trace_context=trace_context,
+            )
+        if memory_extract_ctx.summarizer is not None:
+            await memory_extract_ctx.summarizer.summarize_and_store(
+                messages=ledger,
+                session_id=session_id,
+                trace_context=trace_context,
+            )
     except Exception:  # noqa: BLE001 — formation is best-effort; never break the stream
         logger.exception(
-            "chat session %s/%s: memory auto-extract failed (best-effort)",
+            "chat session %s/%s: post-send memory formation failed (best-effort)",
             tenant_id,
             session_id,
         )

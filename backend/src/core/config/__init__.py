@@ -169,6 +169,18 @@ class Settings(BaseSettings):
     # router hook is a no-op (byte-identical to 57.148). Env: CHAT_MEMORY_AUTO_EXTRACT.
     chat_memory_auto_extract: bool = True
 
+    # Sprint 57.151 §Memory cross-session conversation recall
+    # (AD-Memory-Formation-Session-Recall, 缺口 2): when True (default), the chat
+    # router summarizes the just-finished conversation after every send (a cheap-
+    # tier LLM pass, riding the same post-send BackgroundTask as auto-extract) and
+    # upserts a rolling per-session summary into memory_session_summary; the
+    # PromptBuilder then injects the user's recent PRIOR-session summaries into a
+    # NEW session so the agent recalls "what we worked on last time". Gates BOTH
+    # formation (router) + recall (make_chat_memory_deps threads the store only when
+    # on). False → no summarize + no store threaded → byte-identical to 57.150.
+    # Env: CHAT_SESSION_SUMMARY.
+    chat_session_summary: bool = True
+
     # ---- Sprint 57.145 knowledge connector (first real external source) -
     # Root folder the knowledge_search tool reads (.md/.txt, recursive). Default =
     # in-repo planning docs (real content, zero setup); prod overrides to a company

@@ -53,6 +53,13 @@ ALLOWLIST_PATTERNS: tuple[str, ...] = (
     # not subject to centralized PromptBuilder routing.
     "agent_harness/context_mgmt/compactor/",
     "agent_harness/memory/extraction.py",
+    # Sprint 57.151: Cat 3 SessionSummarizer is a background memory-formation
+    # caller (same category as extraction.py) — it runs a narrow cheap-tier
+    # summarization of a finished conversation into memory_session_summary for
+    # cross-session recall. It builds its own task-specific summary prompt and is
+    # by design NOT the main agent loop (no memory layers / tools / cache
+    # breakpoints), so it is not routed through the centralized PromptBuilder.
+    "agent_harness/memory/session_summarizer.py",
     # Sprint 53.2: Cat 8 CircuitBreakerWrapper is a transparent ChatClient
     # decorator at adapter layer — it delegates `chat()` / `stream()` to the
     # inner adapter without constructing prompts. Caller (the AgentLoop) has

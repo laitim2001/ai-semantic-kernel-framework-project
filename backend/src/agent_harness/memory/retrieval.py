@@ -29,18 +29,24 @@ Description:
       PromptBuilder uses so a "who am I?" question recalls facts even when it
       shares no keyword with them. search() stays query-gated (ILIKE).
 
+    Cross-session recall (Sprint 57.151):
+    - recent_sessions() pulls a user's recent PRIOR-session summaries (the rolling
+      memory_session_summary rows) excluding the current session — the cross-session
+      conversation recall the PromptBuilder injects every turn (mirrors profile()).
+
 Owner: 01-eleven-categories-spec.md §範疇 3 (Memory)
 Created: 2026-04-30 (Sprint 51.2 Day 3.1)
-Last Modified: 2026-06-27
+Last Modified: 2026-06-30
 
 Modification History (newest-first):
+    - 2026-06-30: Sprint 57.151 — add recent_sessions() cross-session recall (缺口 2)
     - 2026-06-27: Sprint 57.148 — add profile() always-on user-scope pull (memory-formation Slice 1)
 """
 
 from __future__ import annotations
 
 import asyncio
-from typing import Literal
+from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from agent_harness._contracts import MemoryHint, TraceContext
@@ -48,6 +54,25 @@ from agent_harness.memory._abc import MemoryLayer
 
 _TimeScale = Literal["short_term", "long_term", "semantic"]
 _Scope = Literal["system", "tenant", "role", "user", "session"]
+
+
+class SessionSummaryReader(Protocol):
+    """Structural type for the cross-session summary read (Sprint 57.151).
+
+    DBSessionSummaryStore satisfies this; declared as a Protocol so MemoryRetrieval
+    stays decoupled from the concrete DB store (and unit tests can pass a fake).
+    """
+
+    async def recent_for_user(
+        self,
+        *,
+        tenant_id: UUID,
+        user_id: UUID,
+        exclude_session_id: UUID | None,
+        limit: int,
+    ) -> list[Any]:
+        """Return the user's recent prior-session summary rows (see DBSessionSummaryStore)."""
+        ...
 
 
 class MemoryRetrieval:
@@ -58,8 +83,17 @@ class MemoryRetrieval:
     deployments, e.g., 51.2 9/15 cell scope).
     """
 
-    def __init__(self, layers: dict[str, MemoryLayer]) -> None:
+    def __init__(
+        self,
+        layers: dict[str, MemoryLayer],
+        *,
+        session_summary_store: SessionSummaryReader | None = None,
+    ) -> None:
         self._layers = layers
+        # Sprint 57.151 (AD-Memory-Formation-Session-Recall): the cross-session
+        # summary read for recent_sessions(). None (the default) preserves every
+        # existing construction + makes recent_sessions() a no-op (byte-identical).
+        self._session_summary_store = session_summary_store
 
     async def search(
         self,
@@ -162,5 +196,57 @@ class MemoryRetrieval:
             trace_context=trace_context,
         )
 
+    async def recent_sessions(
+        self,
+        *,
+        tenant_id: UUID | None = None,
+        user_id: UUID | None = None,
+        exclude_session_id: UUID | None = None,
+        top_k: int = 3,
+        trace_context: TraceContext | None = None,
+    ) -> list[MemoryHint]:
+        """Always-on cross-session conversation recall (NOT query-gated).
 
-__all__ = ["MemoryRetrieval"]
+        Mirrors profile(): pulls the user's recent prior-session summaries from the
+        session_summary_store (the rolling memory_session_summary rows), EXCLUDING
+        the current session (its live transcript is already in context). The
+        PromptBuilder prepends these as layer="session" hints every turn so a NEW
+        session answers "what were we working on last time?" with the real
+        prior-session content. Closes AD-Memory-Formation-Session-Recall (缺口 2).
+
+        Returns [] when tenant/user is None (zero-trust) or no store is wired (the
+        chat_session_summary flag is off → byte-identical to pre-57.151). The store
+        read is best-effort (returns [] on failure) so recall never crashes build.
+        """
+        if tenant_id is None or user_id is None or self._session_summary_store is None:
+            return []
+        rows = await self._session_summary_store.recent_for_user(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            exclude_session_id=exclude_session_id,
+            limit=top_k,
+        )
+        hints: list[MemoryHint] = []
+        for row in rows:
+            summary_text = str(row.summary)
+            unresolved = list(getattr(row, "unresolved_issues", None) or [])
+            if unresolved:
+                joined = "; ".join(str(u) for u in unresolved)
+                summary_text = f"{summary_text} (open: {joined})"
+            hints.append(
+                MemoryHint(
+                    hint_id=row.session_id,
+                    layer="session",
+                    time_scale="long_term",
+                    summary=summary_text[:200],
+                    confidence=0.6,
+                    relevance_score=0.6,
+                    full_content_pointer=f"memory_session_summary:{row.session_id}",
+                    timestamp=row.updated_at,
+                    tenant_id=tenant_id,
+                )
+            )
+        return hints
+
+
+__all__ = ["MemoryRetrieval", "SessionSummaryReader"]
