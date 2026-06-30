@@ -109,6 +109,7 @@ from ._category_factories import (
     make_chat_memory_deps,
     make_chat_message_store,
     make_chat_prompt_builder,
+    make_chat_session_summary_store,
     make_chat_state_deps,
     make_chat_subagent_dispatcher,
     make_chat_todo_store,
@@ -136,6 +137,7 @@ if TYPE_CHECKING:
     from agent_harness.hitl import HITLManager
     from agent_harness.memory.extraction import MemoryExtractor
     from agent_harness.memory.retrieval import MemoryRetrieval
+    from agent_harness.memory.session_summarizer import SessionSummarizer
     from agent_harness.observability import Tracer
     from agent_harness.orchestrator_loop._abc import AgentLoop
     from agent_harness.skills import SkillRegistry
@@ -795,14 +797,20 @@ def build_real_llm_handler(
 
 @dataclass(frozen=True)
 class ChatMemoryExtractContext:
-    """The collaborators the chat post-completion auto-extract hook needs
-    (Sprint 57.149, AD-Memory-Formation-Auto-Extract). Bundled so the router
-    threads ONE optional arg through _stream_loop_events, not three.
+    """The collaborators the chat post-completion memory hook needs
+    (Sprint 57.149 auto-extract + Sprint 57.151 session summary). Bundled so the
+    router threads ONE optional arg through _stream_loop_events, not several.
+
+    `extractor` is None when CHAT_MEMORY_AUTO_EXTRACT is off; `summarizer` is None
+    when CHAT_SESSION_SUMMARY is off — the two post-send features are independently
+    gated and share the one loaded ledger. The router builds the ctx when EITHER is
+    on; _maybe_auto_extract runs each only if its collaborator is present.
     """
 
-    extractor: MemoryExtractor
+    extractor: MemoryExtractor | None
     retrieval: MemoryRetrieval
     message_store: MessageStore
+    summarizer: SessionSummarizer | None = None
 
 
 def build_chat_memory_extractor(
@@ -811,22 +819,24 @@ def build_chat_memory_extractor(
     session_id: "UUID | None" = None,
     tenant_id: "UUID | None" = None,
 ) -> "ChatMemoryExtractContext | None":
-    """Cat 3 (Sprint 57.149, AD-Memory-Formation-Auto-Extract): the post-send
-    Option-B deterministic-extraction context for the chat real_llm path.
+    """Cat 3: the post-send memory-formation context for the chat real_llm path.
 
-    Bundles (a) a MemoryExtractor bound to the CHEAP tier (profile.cheap — the
-    same background-LLM tier as the verifier (57.97) / compaction (57.109); a
-    strong-tier extraction would be needless cost), (b) the MemoryRetrieval used
-    to read existing facts for prompt-level dedup, and (c) the per-session
-    DBMessageStore the hook loads the conversation ledger from. None when the
-    Azure env is missing OR db/session/tenant are absent — soft: the router
-    treats None as "auto-extract unavailable" and skips the hook (it never
-    raises, unlike build_real_llm_handler).
+    Bundles up to two cheap-tier (profile.cheap) post-send formation collaborators,
+    each independently gated by its env flag:
+      - extractor (Sprint 57.149, CHAT_MEMORY_AUTO_EXTRACT): durable user-fact
+        extraction → UserLayer, with the MemoryRetrieval for prompt-level dedup.
+      - summarizer (Sprint 57.151, CHAT_SESSION_SUMMARY): a rolling per-session
+        conversation summary → memory_session_summary (cross-session recall).
+    Both load the conversation ledger from the same per-session DBMessageStore.
+
+    Returns None when the Azure env is missing, db/session/tenant are absent, or
+    BOTH features are off — soft: the router treats None as "no post-send memory
+    work" and skips the hook (it never raises, unlike build_real_llm_handler).
 
     Called SEPARATELY by the router AFTER build_handler (which returns the loop
     alone). Threading a (loop, ctx) tuple through build_handler would break its
-    ~12 callers (router / resume service / ~10 unit tests) — anti-surgical — so
-    the cheap profile object is rebuilt here (a construction, NO API call).
+    ~12 callers — anti-surgical — so the cheap profile object is rebuilt here (a
+    construction, NO API call).
     """
     required = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT_NAME"]
     if any(not os.environ.get(k) for k in required):
@@ -834,24 +844,44 @@ def build_chat_memory_extractor(
     if db is None or session_id is None or tenant_id is None:
         return None
 
+    settings = get_settings()
+    if not settings.chat_memory_auto_extract and not settings.chat_session_summary:
+        return None
+
     message_store = make_chat_message_store(db, session_id, tenant_id)
     if message_store is None:
         return None
 
     # Late imports mirror build_real_llm_handler — keep azure SDK weight out of
-    # unit tests that only exercise echo_demo / non-extract paths.
+    # unit tests that only exercise echo_demo / non-formation paths.
     from adapters.azure_openai.profile import build_azure_model_profile
     from agent_harness.memory.extraction import MemoryExtractor
     from agent_harness.memory.layers.user_layer import UserLayer
+    from agent_harness.memory.session_summarizer import SessionSummarizer
 
     profile = build_azure_model_profile(model_policy)
     retrieval, memory_layers = make_chat_memory_deps(db)
-    # make_chat_memory_deps always constructs layers["user"] as a UserLayer
-    # (_category_factories.py:303); the dict value type is the MemoryLayer ABC.
-    user_layer = cast("UserLayer", memory_layers["user"])
-    extractor = MemoryExtractor(chat_client=profile.cheap, user_layer=user_layer)
+
+    extractor: MemoryExtractor | None = None
+    if settings.chat_memory_auto_extract:
+        # make_chat_memory_deps always constructs layers["user"] as a UserLayer
+        # (_category_factories.py); the dict value type is the MemoryLayer ABC.
+        user_layer = cast("UserLayer", memory_layers["user"])
+        extractor = MemoryExtractor(chat_client=profile.cheap, user_layer=user_layer)
+
+    summarizer: SessionSummarizer | None = None
+    if settings.chat_session_summary:
+        summary_store = make_chat_session_summary_store(db)
+        if summary_store is not None:
+            summarizer = SessionSummarizer(chat_client=profile.cheap, store=summary_store)
+
+    if extractor is None and summarizer is None:
+        return None
     return ChatMemoryExtractContext(
-        extractor=extractor, retrieval=retrieval, message_store=message_store
+        extractor=extractor,
+        retrieval=retrieval,
+        message_store=message_store,
+        summarizer=summarizer,
     )
 
 

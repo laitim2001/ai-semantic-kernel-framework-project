@@ -69,7 +69,7 @@ from agent_harness.error_handling import (
     RetryPolicyMatrix,
     TenantErrorBudget,
 )
-from agent_harness.memory import MemoryLayer, MemoryRetrieval
+from agent_harness.memory import DBSessionSummaryStore, MemoryLayer, MemoryRetrieval
 from agent_harness.memory.layers.role_layer import RoleLayer
 from agent_harness.memory.layers.session_layer import SessionLayer
 from agent_harness.memory.layers.system_layer import SystemLayer
@@ -90,6 +90,7 @@ from agent_harness.state_mgmt import (
 from agent_harness.subagent import DefaultSubagentDispatcher
 from agent_harness.verification import VerifierRegistry
 from agent_harness.verification.llm_judge import LLMJudgeVerifier
+from core.config import get_settings
 from infrastructure.db.engine import get_session_factory
 from platform_layer.governance.error_budget_provider import maybe_get_budget_store
 
@@ -292,9 +293,9 @@ def make_chat_memory_deps(
       - session → in-memory dict (SessionLayer; per-request instance, no DB).
 
     Args:
-        db: the request AsyncSession (reserved; layers use get_session_factory()).
+        db: the request AsyncSession (the all-present signal for the 57.151
+            session-summary store; the layers themselves use get_session_factory()).
     """
-    del db  # reserved for future per-request session binding; layers self-manage.
     session_factory = get_session_factory()
     layers: dict[str, MemoryLayer] = {
         "system": SystemLayer(session_factory),
@@ -303,8 +304,30 @@ def make_chat_memory_deps(
         "user": UserLayer(session_factory),
         "session": SessionLayer(),
     }
-    retrieval = MemoryRetrieval(layers=layers)
+    # Sprint 57.151 (AD-Memory-Formation-Session-Recall): thread the session-summary
+    # store so MemoryRetrieval.recent_sessions() can recall the user's recent
+    # prior-session summaries. None (flag off / no db) → recent_sessions() is a
+    # no-op → byte-identical to 57.150. Both make_chat_memory_deps callers (the loop
+    # prompt builder + the auto-extract ctx) get the store for free.
+    summary_store = make_chat_session_summary_store(db)
+    retrieval = MemoryRetrieval(layers=layers, session_summary_store=summary_store)
     return retrieval, layers
+
+
+def make_chat_session_summary_store(
+    db: AsyncSession | None,
+) -> DBSessionSummaryStore | None:
+    """Cat 3 (Sprint 57.151): the per-session rolling-summary store, or None when off.
+
+    None when `chat_session_summary` is off OR db is absent (mirrors
+    make_chat_message_store's all-present guard). The store opens its OWN sessions
+    via get_session_factory(); `db` is only the all-present signal. Used by BOTH
+    make_chat_memory_deps (recall) and build_chat_memory_extractor (formation), so
+    the single env flag gates the whole feature byte-identically.
+    """
+    if db is None or not get_settings().chat_session_summary:
+        return None
+    return DBSessionSummaryStore(get_session_factory())
 
 
 def make_chat_subagent_dispatcher(
@@ -481,6 +504,7 @@ __all__ = [
     "make_chat_compactor",
     "make_chat_prompt_builder",
     "make_chat_memory_deps",
+    "make_chat_session_summary_store",
     "make_chat_subagent_dispatcher",
     "make_chat_state_deps",
     "make_chat_error_deps",

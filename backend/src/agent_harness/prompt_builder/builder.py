@@ -36,9 +36,10 @@ Description:
 Owner: 01-eleven-categories-spec.md §範疇 5
 
 Created: 2026-05-01 (Sprint 52.2 Day 1.6)
-Last Modified: 2026-06-04
+Last Modified: 2026-06-30
 
 Modification History (newest-first):
+    - 2026-06-30: Sprint 57.151 — always-on cross-session recall via recent_sessions() (缺口 2)
     - 2026-06-27: Sprint 57.148 — always-on user-identity inject via profile() (memory-formation S1)
     - 2026-06-04: Sprint 57.80 — pending-tool-turn skips user re-anchor (tool-chat convergence)
     - 2026-06-04: Sprint 57.80 — tool-call adjacency invariant after arrange() (orphan-tool 400)
@@ -195,6 +196,7 @@ class DefaultPromptBuilder(PromptBuilder):
         system_role_text: str | None = None,
         max_memory_tokens: int = 2000,
         profile_top_k: int = 5,
+        recent_sessions_top_k: int = 3,
     ) -> None:
         self._memory_retrieval = memory_retrieval
         self._cache_manager = cache_manager
@@ -209,6 +211,7 @@ class DefaultPromptBuilder(PromptBuilder):
         self._system_role_text = system_role_text or SYSTEM_ROLE_TEMPLATE
         self._max_memory_tokens = max_memory_tokens
         self._profile_top_k = profile_top_k
+        self._recent_sessions_top_k = recent_sessions_top_k
 
     async def build(
         self,
@@ -283,6 +286,38 @@ class DefaultPromptBuilder(PromptBuilder):
                     memory_layers["user"] = [
                         *profile_hints,
                         *(h for h in existing_user if h.hint_id not in seen),
+                    ]
+            # Sprint 57.151 (memory-formation: session recall): always-on
+            # cross-session conversation recall. recent_sessions() pulls the user's
+            # recent PRIOR-session summaries (rolling memory_session_summary rows)
+            # EXCLUDING the current session, and we prepend them into the session
+            # layer so a NEW session answers "what were we working on last time?"
+            # with real prior-session content (the equivalent of the profile()
+            # identity inject, but for the conversation arc). [] when no store is
+            # wired (chat_session_summary off) → byte-identical. Same graceful
+            # degrade as profile(): a failure never crashes build.
+            if user_id is not None:
+                try:
+                    recent_hints = await self._memory_retrieval.recent_sessions(
+                        tenant_id=tenant_id,
+                        user_id=user_id,
+                        exclude_session_id=state.durable.session_id,
+                        top_k=self._recent_sessions_top_k,
+                        trace_context=child_ctx,
+                    )
+                except Exception as exc:  # pragma: no cover - defensive degrade path
+                    _logger.warning(
+                        "MemoryRetrieval.recent_sessions failed (tenant=%s); skip recall: %s",
+                        tenant_id,
+                        exc,
+                    )
+                    recent_hints = []
+                if recent_hints:
+                    existing_session = memory_layers.get("session", [])
+                    seen_sids = {h.hint_id for h in recent_hints}
+                    memory_layers["session"] = [
+                        *recent_hints,
+                        *(h for h in existing_session if h.hint_id not in seen_sids),
                     ]
             # Sprint 57.65 (A-1 Tier2): cap the rendered memory block to
             # max_memory_tokens (drop lowest-confidence / oldest first). The cap
