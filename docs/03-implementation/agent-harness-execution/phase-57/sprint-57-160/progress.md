@@ -54,7 +54,27 @@
 ### Notes
 - Chose instance-config (`tool_anchor_keep` on the masker) over a call-kwarg so the factory injects one configured masker into both compactors with zero compactor-signature / call-site threading change (plan §3.1 WHY).
 
-## Day 2 — A/B reduction/retention harness (US-3) — (pending)
+## Day 2 — A/B reduction/retention harness (US-3) — 2026-07-07
+
+### Accomplishments
+- **`scripts/benchmark_tool_anchored_masking.py`** (NEW, mirrors 57.139 `benchmark_layered_compaction.py`): `load_cases`/`build_transcript` (ONE user turn + K×(assistant tool_call, tool result))/`measure_case` (OFF user-anchored vs ON tool-anchored + `_mechanical_retention_ok`)/`build_report` (means + `retention_ok_rate` + `recommend_default_on`)/`report_to_markdown`/`main` (cp950 `sys.stdout.reconfigure` guard). Fully deterministic (masking is a pure LLM-free transform) → NO Azure arm; behavioural retention deferred to the Day 3 drive-through (stronger than a synthetic probe — documented Day-2 scope decision).
+- **`tests/fixtures/context_mgmt/tool_anchored_masking_cases.yaml`** (NEW): 8 single-user-turn cases (deep-tool-run / mid / many-small / few-large / prose-balanced / long-single-send 20-round / keep-1-aggressive / keep-covers-all boundary).
+- **`tests/unit/scripts/test_benchmark_tool_anchored_masking.py`** (NEW): 13 CI-safe tests (importlib-shadow load mirror; real TiktokenCounter; OFF-noop / ON-reduces / keep-covers-all passthrough / keep-1-most-aggressive / fixture-verdict / build_report recommend logic incl. retention-veto + off-not-noop + below-materiality).
+
+### A/B verdict (real TiktokenCounter, deterministic) — `recommend_default_on: True`
+| metric | value |
+|--------|-------|
+| mean off_reduction (user-anchored, DEFAULT) | **0.00%** — confirms the single-user-turn no-op the fix targets |
+| mean on_reduction (tool-anchored) | **60.83%** |
+| retention_ok_rate | **100.00%** |
+| **recommend_default_on** | **True** |
+
+Per-case ON reduction 55.4%–86.6% (except `keep-covers-all` boundary 0% by design); OFF 0% on ALL cases. Report archived: `artifacts/tool_anchored_masking_report.{md,json}`.
+
+### Gate (full, Day 2.x)
+- pytest **3202 passed + 6 skipped** (baseline 3180 → +28: 5 masker + 10 factory incl. 6-param env test + 13 harness; NO regression)
+- mypy `src` **400** (unchanged; scripts/ not in `mypy src` scope, mirrors 57.139 harness) · run_all **11/11** · flake8/black/isort clean (fixed 4 harness docstring E501) · LLM-SDK-leak clean (no openai/anthropic import)
+- FE untouched → Vitest 927 / mockup 51 unchanged; `npm run build` N/A (0 frontend files changed)
 
 ## Day 3 — Drive-through (US-4, MANDATORY) — (pending)
 

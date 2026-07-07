@@ -47,20 +47,14 @@
 ## Day 2 — A/B reduction/retention harness (US-3)
 
 ### 2.1 Harness + corpus
-- [ ] **`scripts/benchmark_tool_anchored_masking.py`** (mirror `benchmark_layered_compaction.py`)
-  - DoD: `load_cases`/`build_transcript` (single-user-turn K-tool)/`measure_case` (OFF vs ON reduction% + mechanical retention bool)/`build_report` (means + `retention_ok_rate` + `recommend_default_on`)/`report_to_markdown`/`main`; CI-safe core (real `TiktokenCounter`, no Azure); optional `RUN_AZURE_INTEGRATION` behavioural arm; cp950 + importlib-shadow guards
-  - Verify: `python backend/scripts/benchmark_tool_anchored_masking.py` runs, writes report, prints `mean_off_reduction≈0` + `mean_on_reduction>0` + `retention_ok_rate=1.0`
-- [ ] **`tests/fixtures/context_mgmt/tool_anchored_masking_cases.yaml`** — single-user-turn tool-heavy corpus (varying n_tool_calls / tool_result_chars / tool_anchor_keep + a `<=N` no-op case)
-  - DoD: schema-valid; ≥8 discriminating cases
-  - Verify: `load_cases` parses without error
+- [x] **`scripts/benchmark_tool_anchored_masking.py`** — mirror 57.139; deterministic OFF-vs-ON + `_mechanical_retention_ok`; NO Azure arm (behavioural retention → Day 3 drive-through, documented); cp950 + importlib-shadow guards. Verdict: **off 0.00% / on 60.83% / retention 100% / recommend_default_on True**
+- [x] **`tool_anchored_masking_cases.yaml`** — 8 single-user-turn cases incl. `keep-covers-all` boundary; `load_cases` parses
 
 ### 2.2 Harness CI-safe tests
-- [ ] **`tests/unit/scripts/test_benchmark_tool_anchored_masking.py`**
-  - DoD: real `TiktokenCounter` + fixture; assert OFF no-op / ON reduction / retention / verdict logic; NO Azure
-  - Verify: `python -m pytest backend/tests/unit/scripts/test_benchmark_tool_anchored_masking.py -q`
+- [x] **`test_benchmark_tool_anchored_masking.py`** — 13 tests (real TiktokenCounter; OFF-noop/ON-reduces/passthrough/keep-1/fixture-verdict/report-logic) → 13 passed
 
 ### 2.x Full gate
-- [ ] mypy `src` 400 · run_all 11/11 · backend pytest 3180 + new · Vitest 927 (unchanged) · `npm run lint && npm run build` clean (no `--silent`) · mockup 51 (`diff` empty) · black/isort/flake8 clean · LLM-SDK-leak clean
+- [x] pytest **3202 passed + 6 skipped** (baseline 3180 +28) · mypy `src` 400 · run_all 11/11 · black/isort/flake8 clean · LLM-SDK-leak clean · FE untouched → Vitest 927 / mockup 51 unchanged (0 FE files → build N/A)
 
 ---
 
