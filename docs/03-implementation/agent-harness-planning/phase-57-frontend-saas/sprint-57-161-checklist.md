@@ -62,25 +62,25 @@
 ## Day 3 — Drive-through (US-4) — real UI + real backend + real LLM (MANDATORY)
 
 ### 3.1 Clean restart (Risk Class E)
-- [ ] Kill stale/orphan backends (`Win32_Process` PID/PPID/StartTime sweep); confirm `:8000` free + sole owner; start single no-`--reload` backend with env-before-start (`CHAT_COMPACTION_TOOL_ANCHORED_MASKING=1` + low `CHAT_COMPACTION_TOKEN_BUDGET`, **NO `CHAT_COMPACTION_PRECLEAR_RATIO`**) + startup-log confirmed
+- [x] `:8000` free + 0 orphan python; started single no-`--reload` backend env-before-start (`CHAT_COMPACTION_TOOL_ANCHORED_MASKING=1` + `CHAT_COMPACTION_TOKEN_BUDGET=2500`, **NO `CHAT_COMPACTION_PRECLEAR_RATIO`**); sole owner PID 20112 + startup log confirmed; vite :3007 untouched
 
-### 3.2 Drive-through (MANDATORY — NOT gate-only)
-- [ ] Real chat-v2 (`/chat-v2`, real_llm) + Azure gpt-5.2, dev-login jamie@acme.com: reuse 57.160 Leg-3 staging (multi-tool single user turn, e.g. 6× knowledge_search) but **preclear OFF**
-- [ ] **THE fix (real UI)**: the 57.159 `CompactionMarker` renders a **REAL `before→after` reduction** WITHOUT preclear — vs 57.160 Leg-1/2's recorded `N→N`; context bounded (loop budget relieved)
-- [ ] Context retention: key facts survive compaction (honest note if run ends in unrelated HITL)
-- [ ] Screenshot `artifacts/sprint-57-161-structural-realcount-marker.png` + observed-vs-intended (+ compare to 57.160 Leg-1/2) → progress.md Day 3
+### 3.2 Drive-through (MANDATORY — NOT gate-only) — STRONG PASS
+- [x] Real chat-v2 (`/chat-v2`, real_llm) + Azure gpt-5.2, dev-login jamie@acme.com: 6× knowledge_search in ONE user turn (57.160 Leg-3 staging) but **preclear OFF**
+- [x] **THE fix (real UI)**: 57.159 `CompactionMarker` renders **REAL reductions WITHOUT preclear** — `22,925 → 10,584 (−54%)` + `21,754 → 13,650 (−37%)` — vs 57.160 Leg-1/2's `N→N`; context bounded ~10-22k band (loop budget relieved) vs 57.159's 4k→35k
+- [x] Retention: BOREALIS-9 survives all 7 compactions (28 occurrences); 6 real knowledge_search snippets rendered. Honest caveat: run ended at `max_turns=8` (bounded-burst ceiling, `stop_reason max_turns`, status completed — NOT HITL, NOT a compaction issue)
+- [x] Screenshot `artifacts/sprint-57-161-structural-realcount-marker.png` + observed-vs-intended (vs 57.160 Leg-1/2) → progress.md Day 3
 
 ---
 
 ## Day 4 — CHANGE-128 + closeout
 
 ### 4.1 CHANGE-128 + design note
-- [ ] **`CHANGE-128-structural-compactor-real-token-count.md`** (gap + fix + drive-through PASS + AD closed + loop-budget-tracking consequence)
-- [ ] **Design note `63-structural-realcount-design.md`** (spike — 8-point gate all ✅; documents the loop-consumes-`tokens_after` runtime invariant + the message-count-ratio→real-count fix + parity with preclear)
+- [x] **`CHANGE-128-structural-compactor-real-token-count.md`** (gap + fix + drive-through PASS + AD closed + loop-budget-tracking consequence)
+- [x] **Design note `63-structural-realcount-design.md`** (spike — 8-point gate all ✅; documents the loop-consumes-`tokens_after` runtime invariant + the message-count-ratio→real-count fix + parity with preclear)
 
 ### 4.2 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (`compaction-structural-realcount-spike` 0.60, 1st pt; flag if ratio out of band → re-point)
-- [ ] Final gate sweep: mypy · run_all · pytest · Vitest · mockup · lint · LLM-SDK-leak
-- [ ] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSE `AD-Compaction-Structural-RealTokenCount`) · sprint-workflow matrix (new `compaction-structural-realcount-spike` 0.60 row)
-- [ ] Anti-pattern self-check (retro Q5): AP-2/3/4/6/8/11 → 0 violations; v2 lints 11/11
-- [ ] **Commit** → ⏳ PR push + open → CI → merge: PENDING USER CONFIRMATION (push is outward-facing) → post-merge status flip after gh-verified MERGED
+- [x] retrospective.md Q1-Q7 + calibration (`compaction-structural-realcount-spike` 0.60, 1st pt ~1.0 IN band)
+- [x] Final gate sweep: mypy 400 · run_all 11/11 · pytest 3206+6skip · Vitest 927 / mockup 51 (FE untouched) · lint clean · LLM-SDK-leak clean
+- [x] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSED `AD-Compaction-Structural-RealTokenCount`; mechanism half of `AD-Compaction-ToolAnchored-Preclear-Phase58` annotated closed) · sprint-workflow matrix (new `compaction-structural-realcount-spike` 0.60 row)
+- [x] Anti-pattern self-check (retro Q5): 0 violations; v2 lints 11/11
+- [ ] **Commit (Day 3-4 docs)** → ⏳ PR push + open → CI → merge: PENDING USER CONFIRMATION (push is outward-facing) → post-merge status flip after gh-verified MERGED
