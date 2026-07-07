@@ -76,6 +76,38 @@ Per-case ON reduction 55.4%–86.6% (except `keep-covers-all` boundary 0% by des
 - mypy `src` **400** (unchanged; scripts/ not in `mypy src` scope, mirrors 57.139 harness) · run_all **11/11** · flake8/black/isort clean (fixed 4 harness docstring E501) · LLM-SDK-leak clean (no openai/anthropic import)
 - FE untouched → Vitest 927 / mockup 51 unchanged; `npm run build` N/A (0 frontend files changed)
 
-## Day 3 — Drive-through (US-4, MANDATORY) — (pending)
+## Day 3 — Drive-through (US-4, MANDATORY) — 2026-07-07
+
+### Clean restart (Risk Class E)
+Killed the stale 57.159 backend (PID 65320, `keep_recent=1` leftover) → confirmed `:8000` free + `python.exe` count 0 (no orphan spawn-worker). Started single no-`--reload` backends with the drive-through env set BEFORE start (`load_dotenv` finds root `.env`; startup log `Application startup complete` confirmed sole owner each time).
+
+### Legs (real chat-v2 :3007 + fresh uvicorn :8000 + Azure gpt-5.2, dev-login jamie@acme.com)
+
+**Leg 1 — `keep=3`, budget 3000, python_sandbox** (2 gpt-5.2 turns): markers `4,083→4,083` / `8,185→8,185` **0-reduction**. python_sandbox executed (transcript mentions), but ≤3 tool results → `keep=3` masker no-op.
+
+**Leg 2 — `keep=1`, budget 2500, python_sandbox** (chained a→b→c deps, 4 gpt-5.2 turns): markers `3,947→3,947` / `8,084→8,084` / `12,422→12,422` **STILL 0-reduction** even at `keep=1`.
+
+**🔴 KEY FINDING (Leg 2 root cause — code-confirmed)**: `StructuralCompactor` computes `tokens_after = tokens_before × len(kept)/original` (message-count ratio, `structural.py:192-193`) + `messages_compacted = original − len(kept)`. Tool-anchored masking tombstones tool BODIES **in place** (list length preserved) → `len(kept)==original` → `tokens_after==tokens_before` and `messages_compacted=0`. So the masker **IS** reducing real context, but the `HybridCompactor→StructuralCompactor` path's REPORTED delta is **blind to in-place tombstoning** — the exact limitation 57.139 `preclear.py:19-22` documents. Only the `PreClearCompactor` (real `TiktokenCounter` re-count) surfaces the reduction in the `ContextCompacted` event.
+
+**Leg 3 — `keep=1` + `CHAT_COMPACTION_PRECLEAR_RATIO=0.5` + budget 2500, 6× knowledge_search** (6 gpt-5.2 turns, trace `868182b2`): **REAL reductions rendered LIVE** on the DEFAULT single-user-turn path:
+| marker | reduction |
+|--------|-----------|
+| `3,918 → 3,918 · 0 msgs` | 1st compaction, 1 tool result → keep=1 passthrough |
+| `7,858 → 7,780 · 1 msgs` | −78 |
+| `13,615 → 7,933 · 1 msgs` | **−42%** |
+| `13,751 → 9,273 · 2 msgs` | −33% |
+| `16,199 → 7,984 · 2 msgs` | **−51%** |
+
+Context **bounded ~8-9k** even as raw grew to 16,199 — vs 57.159's unbounded 4k→35k. Screenshot: `artifacts/sprint-57-160-leg3-compaction-real-reduction.png` (marker chip `⚡ Context compacted · 16,199 → 7,984 tokens (hybrid · 2 msgs)` + a `knowledge_search` agent turn).
+
+### Retention ✅
+`BOREALIS-9` codename retained (session `memory_session_summary` reads reference it) + all 6 topics searched + agent executed all 6 searches coherently THROUGH the aggressive compaction → the tombstoning of old tool blobs did NOT break task completion or context recall.
+
+### Honest caveats
+- The run ended in **`awaiting_approval`** (acme-prod tenant's pre-existing HITL policy escalated on a later action — UNRELATED to compaction; all 5 compaction markers fired BEFORE the pause), so the agent's final "codename + topics" summary wasn't delivered in-UI; retention is verified via the session-memory reads + the completed 6-search flow, not a final-answer string.
+- **Env config used** (documented for honesty): `CHAT_COMPACTION_TOOL_ANCHORED_MASKING=1` (the 57.160 lever) + `CHAT_COMPACTION_PRECLEAR_RATIO=0.5` (57.139 preclear, needed to SURFACE the reduction) + `CHAT_COMPACTION_TOKEN_BUDGET=2500` (trigger lever, same approach as 57.159). `keep_recent` at default 5. The tool-anchored lever is default OFF; this is an opt-in drive-through.
+
+### Observed vs intended
+- Intended: lever ON → marker shows REAL reduction on the default single-user-turn path. **Observed: PASS** (−42%, −51% real reductions rendered) — BUT only once `PreClearCompactor` is also enabled; the tool-anchored masking makes preclear EFFECTIVE on single-user-turn (closing the mechanism half of `AD-Compaction-ToolAnchored-Preclear-Phase58`). The Structural path still reports the reduction as 0 (message-count-ratio blindness) → NEW carryover `AD-Compaction-Structural-RealTokenCount` (upgrade StructuralCompactor.tokens_after to real token counting so tool-anchored masking surfaces even without preclear).
 
 ## Day 4 — CHANGE-127 + closeout — (pending)

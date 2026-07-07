@@ -61,13 +61,13 @@
 ## Day 3 — Drive-through (US-4) — real UI + real backend + real LLM (MANDATORY)
 
 ### 3.1 Clean restart (Risk Class E)
-- [ ] Kill stale uvicorn reloader + orphan spawn-workers on :8000 (verify LIVE worker via `Win32_Process` PID/PPID/StartTime, not just port owner); start single no-`--reload` backend with `CHAT_COMPACTION_TOOL_ANCHORED_MASKING=<N>` + low `CHAT_COMPACTION_TOKEN_BUDGET`; confirm sole port owner + startup log
+- [x] Killed stale 57.159 backend (PID 65320); confirmed `:8000` free + `python.exe` count 0 (no orphan); started single no-`--reload` backends with env-before-start + startup-log confirmed sole owner (3 legs)
 
 ### 3.2 Drive-through (MANDATORY — NOT gate-only)
-- [ ] Real chat-v2 (`/chat-v2`, real_llm) + Azure gpt-5.2: send a long single tool-using prompt (many tool round-trips within ONE user turn)
-- [ ] **THE fix (real UI)**: the 57.159 `CompactionMarker` renders a REAL reduction (`tokensBefore > tokensAfter`, e.g. `12,480 → 6,210`) on the DEFAULT path — contrast the 57.159 no-op `N → N`
-- [ ] Context retention: a follow-up about an early fact still answers correctly (recent-N + provenance survived; older blobs tombstoned)
-- [ ] Screenshot + observed-vs-intended → progress.md Day 3 (note: same finding 57.159 caught, now DRIVEN to a real reduction)
+- [x] Real chat-v2 (`/chat-v2`, real_llm) + Azure gpt-5.2 + real knowledge_search + real Qdrant, dev-login jamie@acme.com: Leg 3 = 6× knowledge_search in ONE user turn
+- [x] **THE fix (real UI)**: 57.159 `CompactionMarker` renders **REAL reductions** on the DEFAULT single-user-turn path — `13,615 → 7,933 (−42%)`, `16,199 → 7,984 (−51%)` — vs 57.159's no-op `N→N`. context bounded ~8-9k vs 4k→35k
+- [x] Context retention: `BOREALIS-9` + all 6 topics retained through aggressive compaction; agent completed all 6 searches (final summary blocked by an UNRELATED HITL `awaiting_approval` — honest caveat in progress)
+- [x] Screenshot `artifacts/sprint-57-160-leg3-compaction-real-reduction.png` + full observed-vs-intended + KEY FINDING (Structural message-count-ratio blindness → PreClearCompactor needed to surface) → progress.md Day 3
 
 ---
 
