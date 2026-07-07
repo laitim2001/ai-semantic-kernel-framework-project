@@ -74,12 +74,12 @@
 ## Day 4 — CHANGE-127 + closeout
 
 ### 4.1 CHANGE-127 + design note
-- [ ] **`CHANGE-127-<slug>.md`** (gap + fix + drive-through PASS + AD closed)
-- [ ] **Design note** (spike — 8-point gate; data-gated flip-to-default verdict) → `docs/03-implementation/agent-harness-planning/<NN>-<topic>.md`
+- [x] **`CHANGE-127-tool-anchored-observation-masking.md`** (gap + fix + drive-through PASS + AD closed + KEY finding)
+- [x] **Design note `62-tool-anchored-masking-design.md`** (spike — 8-point gate all ✅; data-gated flip-to-default verdict + Structural-blindness finding)
 
 ### 4.2 Closeout
-- [ ] retrospective.md Q1-Q7 + calibration (`compaction-tool-anchored-masking-spike` 0.60, 1st data point; flag if ratio out of [0.7,1.2] band → re-point)
-- [ ] Final gate sweep: mypy · run_all · pytest · Vitest · mockup · build · lint · LLM-SDK-leak
-- [ ] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSE `AD-Compaction-NoOp-On-Single-User-Turn-Chat-Path`; annotate `AD-Compaction-ToolAnchored-Preclear-Phase58`) · sprint-workflow matrix (new `compaction-tool-anchored-masking-spike` row)
-- [ ] Anti-pattern self-check (retro Q5): AP-2/3/4/6/8/11 → violations; v2 lints 11/11
+- [x] retrospective.md Q1-Q7 + calibration (`compaction-tool-anchored-masking-spike` 0.60, 1st pt ~1.0 IN band)
+- [x] Final gate sweep: mypy 400 · run_all 11/11 · pytest 3202+6skip · Vitest 927 / mockup 51 (FE untouched) · lint clean · LLM-SDK-leak clean
+- [x] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSED `AD-Compaction-NoOp-On-Single-User-Turn-Chat-Path`; annotated `AD-Compaction-ToolAnchored-Preclear-Phase58` mechanism-half closed) · sprint-workflow matrix (new `compaction-tool-anchored-masking-spike` 0.60 row)
+- [x] Anti-pattern self-check (retro Q5): 0 violations; v2 lints 11/11
 - [ ] **Commit** → ⏳ PR push + open → CI → merge: PENDING USER CONFIRMATION (push is outward-facing) → post-merge status flip after gh-verified MERGED
