@@ -115,7 +115,7 @@ N+1. <AD> CLOSED; CHANGE-NNN; calibration recorded; navigators + next-phase-cand
 
 ## 7. Workload Calibration
 
-- Scope class **`<class>` <mult>** (<rationale; cite `.claude/rules/sprint-workflow.md` §Scope-class multiplier matrix; note if NEW class / Nth data point>).
+- Scope class **`<class>` <mult>** (<rationale; **Read + cite `docs/03-implementation/agent-harness-execution/calibration-matrix.md`** (moved from sprint-workflow.md — REFACTOR-011); note if NEW class / Nth data point>).
 - **Agent-delegated: <yes / no / partial / TBD-Day-1-decision>** (<rationale>). `agent_factor` <value> → <3-segment / 4-segment> form.
 - Bottom-up est ~X hr (<per-task breakdown>) → class-calibrated commit ~Y hr (mult Z) [→ agent-adjusted ~Y' hr (agent_factor)]. Day-4 retro Q2 verifies.
 

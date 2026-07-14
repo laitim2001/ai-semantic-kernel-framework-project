@@ -2,7 +2,7 @@
 
 **Purpose**: V2 開發規則總覽 + on-demand 載入指南。所有規則對齐 `docs/03-implementation/agent-harness-planning/` 21 份權威文件。
 
-**Last Updated**: 2026-05-29（Sprint 57.62 closeout chore — 移除 graphify-usage on-demand 12→11；graphify 已停用 per user decision Sprint 52.5）
+**Last Updated**: 2026-07-14（REFACTOR-011 — on-demand 11→13：day0-plan-verify + spike-design-note-gate 自 sprint-workflow.md 抽出；calibration-matrix.md 查表指標；hygiene lint）
 **Status**: Active
 
 ---
@@ -14,7 +14,7 @@
 | 位置 | 行為 | 用途 |
 |------|------|------|
 | **`.claude/rules/*.md`**（頂層 4 條 + 本 README）| ✅ Claude Code 自動載入每個 session | 高頻 critical 規則 |
-| **`docs/rules-on-demand/*.md`**（11 條）| ⏸️ 預設不載入，需 AI 主動 `Read` | 情境式規則 |
+| **`docs/rules-on-demand/*.md`**（13 條）| ⏸️ 預設不載入，需 AI 主動 `Read` | 情境式規則 |
 
 **為何脫離 .claude/**: Claude Code 會**遞迴掃描 .claude/ 整樹**載入 project memory；2026-05-09 第一版的 `.claude/rules/on-demand/` 子目錄結構雖然語義上是 on-demand，實際仍被 Claude Code 自動載入（佔 ~39KB／session，違反設計意圖）。將 on-demand rules 移到 `docs/rules-on-demand/` 後 Claude Code 不再掃描，真正落實 Hybrid。
 
@@ -26,14 +26,14 @@
 
 | 檔案 | 用途 | 為何 always |
 |------|------|------------|
-| [`sprint-workflow.md`](./sprint-workflow.md) | Plan → Checklist → Code → Update → Progress 5 步流程 + Day 0 三-prong + calibration matrix | 每個 sprint 起始必依；流程不能 lint |
+| [`sprint-workflow.md`](./sprint-workflow.md) | Plan → Checklist → Code → Update → Progress 5 步流程 + Day 0 三-prong 摘要（calibration matrix + prong 細節已移 on-demand — REFACTOR-011）| 每個 sprint 起始必依；hygiene 由 `check_rules_hygiene.py` lint 強制 |
 | [`file-header-convention.md`](./file-header-convention.md) | File header + Modification History（1-line max + char budget）| 53.x 連續 3 sprint MHist 超 E501 反例驗證重要性 |
 | [`multi-tenant-data.md`](./multi-tenant-data.md) | DB tenant_id 三鐵律 + RLS + GDPR / PII | 每個業務 endpoint 都要對；CI lint 部分覆蓋 |
 | [`anti-patterns-checklist.md`](./anti-patterns-checklist.md) | 11 條 PR 自檢清單（V1 教訓）| 每個 PR merge 前必通；CI lint 只覆蓋 AP-1+2+4 |
 
 ---
 
-## 📋 On-Demand（11 條，需要時主動 Read）
+## 📋 On-Demand（13 條，需要時主動 Read）
 
 > **AI 規則**：碰到下列「Trigger」時，**先 Read 對應規則檔再開始 code**。
 
@@ -52,14 +52,18 @@
 | [`frontend-react.md`](../../docs/rules-on-demand/frontend-react.md) | 純 React/TypeScript 通用約定 |
 | [`frontend-mockup-fidelity.md`](../../docs/rules-on-demand/frontend-mockup-fidelity.md) | 前端頁面開發 / mockup port / 改 `styles-mockup.css` / 設計系統 |
 | [`lint-detector-authoring.md`](../../docs/rules-on-demand/lint-detector-authoring.md) | 寫新 AP-N detector / 維護現有 AP-N detector / debug detector false-positive / 擴 detector 涵蓋新檔案類 |
+| [`day0-plan-verify.md`](../../docs/rules-on-demand/day0-plan-verify.md) | 每個 sprint 的 Day 0（三-prong 完整程序 + drift-class grep 表；REFACTOR-011 自 sprint-workflow.md 抽出）|
+| [`spike-design-note-gate.md`](../../docs/rules-on-demand/spike-design-note-gate.md) | spike sprint 的 Day 4 closeout（8-Point Quality Gate + retro 自查格式；REFACTOR-011 抽出）|
+
+> **Calibration 查表**（非 rule、是 live 數據）：起草 plan §Workload / Day 4 closeout 時 Read [`docs/03-implementation/agent-harness-execution/calibration-matrix.md`](../../docs/03-implementation/agent-harness-execution/calibration-matrix.md)（REFACTOR-011 自 sprint-workflow.md 抽出；row ≤400 字元由 lint 強制）。
 
 ---
 
 ## 任務情境快查（哪些 rule 該配對）
 
 ### 開始一個 sprint
-- ✅ Always: `sprint-workflow.md`（Day 0 三-prong + calibration）
-- 📋 Read: `docs/rules-on-demand/category-boundaries.md`（確認代碼歸屬）
+- ✅ Always: `sprint-workflow.md`（5 步流程 + Day 0 三-prong 摘要）
+- 📋 Read: `docs/rules-on-demand/day0-plan-verify.md`（Day 0 完整程序）+ `calibration-matrix.md`（§Workload 乘數查表）+ `docs/rules-on-demand/category-boundaries.md`（確認代碼歸屬）
 
 ### 寫新檔案
 - ✅ Always: `file-header-convention.md`（header + MHist）
@@ -106,6 +110,8 @@
 | docs/rules-on-demand/git-workflow.md | CLAUDE.md §Code Standards |
 | docs/rules-on-demand/frontend-mockup-fidelity.md | CLAUDE.md §Frontend Mockup-Fidelity Hard Constraint / 16-frontend-design.md |
 | docs/rules-on-demand/lint-detector-authoring.md | 04-anti-patterns.md §AP-N detector authoring（Sprint 57.48 D-DAY0-6 lesson codified Sprint 57.51）|
+| docs/rules-on-demand/day0-plan-verify.md | sprint-workflow.md §Step 2.5（trigger + 摘要留 always-loaded；程序本體 REFACTOR-011 抽出）|
+| docs/rules-on-demand/spike-design-note-gate.md | sprint-workflow.md §Step 5.5（trigger 留 always-loaded；gate 本體 REFACTOR-011 抽出）|
 
 > **權威排序**：V2 規劃文件（21 份）> 本目錄規則 > 既有代碼。衝突以上位者為準。
 
@@ -133,6 +139,7 @@
 
 ## Modification History
 
+- 2026-07-14: REFACTOR-011 — on-demand 11→13（day0-plan-verify + spike-design-note-gate）+ calibration-matrix 指標 + hygiene lint
 - 2026-05-29: Sprint 57.62 closeout chore — 移除 graphify-usage on-demand（12 → 11 條）+ CLAUDE.md §graphify section + on-demand row 移除 + 記入「已淘汰的規則」表（graphify 已停用 per user decision Sprint 52.5；rule 檔 + `graphify-out/` 保留 dormant，未刪）
 - 2026-05-26: Sprint 57.51 — add `lint-detector-authoring.md` on-demand 11→12 (closes AD-Lint-Detector-Code-Aware-Masking-Rule)
 - 2026-05-22: 新增 `frontend-mockup-fidelity.md` 到 On-Demand 索引（10 → 11 條）+ 任務情境快查「前端頁面開發」配對 + V2 文件對應表（align to validated mockup-fidelity method）

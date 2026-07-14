@@ -8,6 +8,7 @@
 **Status**: Active
 
 > **Modification History**
+> - 2026-07-14: REFACTOR-011 — matrix/agent_factor + Step2.5 prongs + Step5.5 gate → on-demand files
 > - 2026-07-14: REFACTOR-009 — matrix + agent_factor narration re-extracted → calibration-log §1/§2
 > - 2026-07-07: REFACTOR-010 — §Sprint Closeout Self-Check +1 line: full SHIPPED carryover → next-phase-candidates-shipped-archive.md, main file keeps 1-line pointer + open ADs only (stop next-phase re-bloat)
 > - 2026-06-17: REFACTOR-008 — Reference Template (Step 1 + Step 2) re-anchored from "most-recent sprint" (relative/floating → monotonic drift) to FROZEN `claudedocs/templates/sprint-{plan,checklist}-template.md` (absolute); enforce short H1 + Summary block + §0 line-breaks (fix the 57.107-130 drift defects)
@@ -93,169 +94,24 @@ When the sprint anticipates code-implementer agent-delegation as the primary Day
 
 > Bottom-up est ~X hr → class-calibrated commit ~Y hr (mult Z) → agent-adjusted commit ~Y' hr (agent_factor 0.55)
 
-where `Y' = Y × 0.55 = X × Z × 0.55`. See §Active Agent Delegation Factor Modifier below for full formula, evidence, rollback rule, and tracking discipline.
+where `Y' = Y × 0.55 = X × Z × 0.55`. See `calibration-matrix.md` §Active Agent Delegation Factor Modifier for full formula, evidence, rollback rule, and tracking discipline.
 
 **MANDATORY plan-time `Agent-delegated:` field** (Sprint 57.57+ — codified via `AD-Plan-Workload-AgentDelegation-Explicit-Field-Codification` PROMOTION; 5-data-point evidence Sprint 57.53+57.54+57.55+57.56+57.57 consecutive usage):
 
 Plan §Workload section MUST include an explicit `Agent-delegated:` field at plan-time (NOT just retrospective Q2). Acceptable values:
 
-- **`yes`** — ≥ 80% of Day 1 work via code-implementer agent. Apply 4-segment form with appropriate `agent_factor` sub-class baseline. Required for sprints generating validation data points under the tier-4 agent_factor sub-class table.
+- **`yes`** — ≥ 80% of Day 1 work via code-implementer agent. Apply 4-segment form with appropriate `agent_factor` sub-class baseline. Required for sprints generating validation data points under the tier-4 agent_factor sub-class table (in `calibration-matrix.md`).
 - **`partial`** — 20-79% via agent. Apply `agent_factor = 0.75` linear interpolation per §Active block formula. Sprint plan §Workload still uses 4-segment form.
 - **`no`** — < 20% via agent (parent-assistant-direct execution). Apply `agent_factor = 1.0`. Sprint plan §Workload uses 3-segment form (no agent-adjusted commit line; class-calibrated commit IS the final commit).
 - **`TBD-Day-1-decision`** — when delegation choice is contingent on Day 0 三-prong findings or Day 1 scope clarification (e.g. Sprint 57.45 Path A vs Path B branch). MUST resolve to `yes`/`no`/`partial` by Day 1 start; recorded as final value in retrospective Q2.
 
 **Rationale** (5-data-point evidence base): plan-time `Agent-delegated:` field surfaced calibration class selection decisions upfront (Sprint 57.53 parent-direct → `agent_factor = 1.0` applied retroactively per Sprint 57.45 Path B precedent; Sprint 57.54-57.57 all delegated-yes pre-declared and consistently honored). Without this field, the `agent_factor` row in §Active block was inconsistently applied — some sprints retroactively classified, some pre-declared. Pre-declaration prevents retro confusion AND surfaces sub-class baseline selection (mechanical-pattern-reuse-heavy 0.30 vs -greenfield-port-style 0.45 vs -design-decisions 0.65) in plan §Workload §Sub-class declaration. Per AD-Plan-2/3/4/5 promotion precedent: 3-data-point evidence sufficient; Sprint 57.57 = 5th consecutive consistent usage.
 
-**Tracking discipline cross-ref**: §Active Agent Delegation Factor Modifier §Tracking discipline (MANDATORY from Sprint 57.43+) §3 row reads "**NEW**: explicit `agent-delegated: yes / no / partial` tag" — Sprint 57.57 codification clarifies this is PLAN-TIME tag (was ambiguous between plan-time vs retro-time in original wording).
+**Tracking discipline cross-ref**: `calibration-matrix.md` §Active Agent Delegation Factor Modifier §Tracking discipline (MANDATORY from Sprint 57.43+) §3 row reads "**NEW**: explicit `agent-delegated: yes / no / partial` tag" — Sprint 57.57 codification clarifies this is PLAN-TIME tag (was ambiguous between plan-time vs retro-time in original wording).
 
-#### Scope-class multiplier matrix (Sprint 57.6+ — closes AD-Reality-10 + AD-Sprint-Plan-7)
+#### Scope-class multiplier matrix + agent_factor — MOVED to on-demand (REFACTOR-011, 2026-07-14)
 
-Per AD-Sprint-Plan-4 (logged Sprint 55.3) + 4-sprint window evidence,one-multiplier-fits-all approach loses signal when scope class differs。Below matrix記錄 active classes per scope。`mid-band` value 0.55 for default unclassified scopes;diversification per evidence。
-
-> **Per-class data-point history + per-cell narration + the matrix change log moved** (REFACTOR-005, 2026-05-31; re-extracted REFACTOR-009, 2026-07-14) → [`calibration-log.md` §1](../../docs/03-implementation/agent-harness-execution/calibration-log.md). **IMPERATIVE — a matrix cell is ≤ 1 line (~250 chars)**: verdict + sprint ratio/band + rollback trigger + `→ calibration-log §1` pointer ONLY; at closeout the full narration goes to calibration-log §1, NEVER into the cell (enforced via §Self-Check at Sprint Closeout). Adjustment rule = §Workload Calibration §When to adjust the multiplier above (3-sprint moving window).
-
-| Scope class | Mult | 3-sprint mean | Status (1-line) |
-|-------------|------|---------------|-----------------|
-| `mixed` (greenfield + reuse) | 0.60 | 0.79 ⬇ | KEEP; AD-Sprint-Plan-6 propose split greenfield 0.60 / pattern-reuse 0.40 |
-| `knowledge-connector-real-source-spike` | 0.55 | n/a (1 pt) | KEEP pending validation (57.145 ratio ~1.15-1.25 upper-edge IN band; first real external connector — drive-through-found bug fix = normal spike cost; if a 2nd lands > 1.2 → 0.65; → calibration-log §1) |
-| `knowledge-embedding-vector-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.146 ratio ~1.05-1.15 IN band; first EmbeddingClient ABC + Qdrant infra; if a 2nd lands > 1.2 → 0.70 — external-dep drive-through is the variance driver; → calibration-log §1) |
-| `knowledge-per-tenant-isolation-spike` | 0.55 | n/a (1 pt) | KEEP pending validation (57.147 ratio ~1.0-1.15 IN band; wires pre-existing pieces, mirrors memory_search; if a 2nd (e.g. Slice 3b RBAC) lands > 1.20 → 0.65 — multi-tenant drive-through setup is the variance driver; → calibration-log §1) |
-| `memory-formation-identity-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.148 ratio ~1.0-1.1 IN band; real-code core held the spike mult per the 57.137 lesson; if a 2nd memory-formation-* lands > 1.20 → 0.85; → calibration-log §1) |
-| `memory-formation-extract-spike` | 0.60 → **0.85** (re-pointed Sprint 57.149) | n/a (1 pt) | KEEP 0.85 pending validation (57.149 1st pt ~1.3-1.4 OVER at 0.60 → re-point 0.85; Day-3 drive-through-found BackgroundTask re-architecture = the over-run; if a 2nd lands < 0.7 at 0.85 → lower; → calibration-log §1) |
-| `memory-upsert-dedup-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.150 ratio ~1.07 IN band; migration + write rewrite held the 0.60, landed clean — dedup fired on send 1; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `memory-session-recall-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.151 ratio ~1.05 IN band; Day-0 reuse-table catch balanced by the JOIN read + 3-leg drive-through; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `memory-formation-combine-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.152 ratio ~1.0-1.05 IN band; real composition + 2 dispatch refactors held the 0.60, drive-through on-budget; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `memory-formation-combine-ab-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.154 ratio ~0.95-1.03 IN band; real-Azure A/B → KEEP combined default ON; if a 2nd lands > 1.20 → 0.75 — real-Azure staging + oracle tuning is the variance risk; → calibration-log §1) |
-| `memory-vector-recall-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.155 ratio ~1.0 IN band; new index + layer read-branch = real design content, ran clean; if a 2nd (e.g. L1/L2 layers) lands > 1.20 → 0.70 — real-embeddings + Qdrant drive-through is the variance driver; → calibration-log §1) |
-| `medium-backend` | 0.80 | ~0.61 (last-3 ~0.44) | KEEP — 3-consec <0.7 but agent-confound resolved at agent_factor sub-class layer; AD-MediumBackend-AICadence-Recalibration needs human-factor data |
-| `medium-frontend` | 0.65 | ~0.54 | KEEP — confound-resolved-at-sub-class-layer; AD-medium-frontend-Baseline-Recalibration |
-| `large multi-domain` | 0.55 | 0.81 | KEEP — lower-trigger (3+ consec <0.7) not met |
-| `reality-check` | 0.85 | n/a (1 pt) | KEEP pending 2-3 sprint validation |
-| `reality-gap-fix` | 0.50 | n/a (1 pt) | KEEP; AD-Sprint-Plan-8 maybe →0.35 |
-| `iam-frontend-spike` | 0.60 | n/a (1 pt) | KEEP pending validation |
-| `iam-backend-spike` | 0.65 | ~1.08 (3 pt) | KEEP — 57.87 ≈1.0 + 57.105 ≈0.95 (IN band) + 57.112 ≈1.28 (slightly over — the FE component + the D13 drive-through detour vs the prior two's purer-backend shape); single over-point, 3-pt mean ≈1.08 IN band → KEEP; if the next IAM-backend spike WITH an FE component also runs >1.20 propose an `iam-backend-with-fe` sub-class ~0.75 |
-| `frontend-arch-spike` | 0.50 | n/a (1 pt) | KEEP; AD-Sprint-Plan-10 maybe split greenfield/reuse-ship |
-| `frontend-feature-with-migration` | 0.50 | n/a (1 pt) | KEEP |
-| `audit-cycle / docs / template` | 0.40 | 1.13 | KEEP — 3-sprint window complete |
-| `frontend-foundation-spike` | 0.50 | n/a (1 pt) | KEEP pending validation |
-| `frontend-e2e-sweep` | 0.50 | n/a (1 pt) | KEEP pending validation |
-| `frontend-refactor-mechanical` | 0.50 → **0.80** (3rd+ app, AD-Sprint-Plan-13) | ~1.7 | KEEP 0.80; flag 4th data point; if >1.20 →0.90 |
-| `frontend-css-engine-hotfix` | 0.60 | n/a (1 pt) | KEEP pending validation |
-| `mockup-integration-foundation` | 0.55 | n/a (1 pt) | KEEP |
-| `mockup-page-port-with-backend-pairing-and-audit` | 0.60 | n/a (1 pt) | KEEP; if <0.7 recurs →0.40 |
-| `frontend-mockup-direct-port` | 0.55 | 0.85 (bimodal) | KEEP; if 3rd bimodal → split token-sweep 0.40 / structural 0.85 |
-| `mockup-author-and-port` | 0.70 | n/a (1 pt) | KEEP pending validation (57.121 ratio ~1.17 IN band; authoring half has no prior source — the ceremony-aware 0.70 confirmed; if a 2nd lands > 1.20 → 0.85; → calibration-log §1) |
-| `harness-loadbearing-gap-fix` | 0.60 → **0.85** (re-pointed Sprint 57.122) | n/a (1 pt) | KEEP 0.85 pending validation (57.122 1st pt ~1.8 OVER at 0.60 → re-point 0.85; ceremony-not-code-accelerated — full-ceremony parent-direct + design note + drive-through lands ~0.85-1.0; if a 2nd lands < 0.7 at 0.85 → lower; → calibration-log §1) |
-| `frontend-fixture-to-real-data-wiring` | 0.75 → **0.90** (re-pointed Sprint 57.123) | n/a (1 pt) | KEEP 0.90 pending validation (57.123 1st pt ~1.33 OVER at 0.75 → re-point 0.90; ceremony-not-code-accelerated + a Risk-E orphan-worker detour; if a 2nd lands < 0.7 at 0.90 → lower; → calibration-log §1) |
-| `frontend-mockup-fidelity-audit` | 0.85 | n/a (1 pt) | KEEP; if recurs →0.45-0.55 |
-| `frontend-mockup-strict-rebuild` | 0.60 | ~0.63 | KEEP — agent-confound resolved at agent_factor sub-class layer |
-| `frontend-foundation-token-correction` | 0.55 | n/a (1 pt) | KEEP |
-| `frontend-verbatim-css-foundation` | 0.55 | n/a (1 pt) | KEEP |
-| `frontend-verbatim-css-repoint -simple` | 0.50 | ~1.0 | KEEP (criteria: ≤3 files / no AP-2 banner / no dual-mount / no playback widgets / oklch bump <4) |
-| `frontend-verbatim-css-repoint -with-extras` | 0.65 | ~1.04 | KEEP (criteria: any of multi-file >3 / AP-2 banner / dual-mount / playback widgets / oklch bump ≥4) |
-| `frontend-page-bug-fix` | 0.45 | n/a (1 pt) | KEEP; if >1.20 recurs →0.55-0.60 |
-| `mixed-multidomain-bundle` | 0.65 | ~0.9-1.0 (latest 57.124) | KEEP — 57.124 (3 tracks) ratio ≈1.0-1.1 IN band parent-direct + 57.107 B3 ≈0.8-0.9 IN band; the prior 0.42 mean was the agent-confound era (→ calibration-log §1) |
-| `subagent-child-loop-spike` | 0.60 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.94 ratio ~0.93 IN band; Cat 11 new-domain spike, parent-direct) |
-| `subagent-sse-relay-wiring` | 0.55 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.95 ratio ~0.9-1.0 IN band; Cat 11→12 backend composition wiring, parent-direct) |
-| `chatv2-transcript-persistence-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.125 ratio ~1.0 IN band; mirrors the proven persist observer + read endpoint, NO migration; the Day-0 re-scope saved building the wrong thing; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `chatv2-history-replay-fullstack` | 0.60 → **0.85** (re-pointed Sprint 57.126) | n/a (1 pt) | KEEP 0.85 pending validation (57.126 1st pt ~1.43 OVER at 0.60 → re-point 0.85; Day-0 flipped FE-only → full-stack + an Option-C dead-end investigation; ceremony-not-code-accelerated; if a 2nd lands < 0.7 at 0.85 → lower; → calibration-log §1) |
-| `chatv2-multiturn-rehydration-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.127 ratio ~0.98 IN band; pure-backend new-ABC spike (MessageStore) — Day-0 net scope-reduction offset the serde relocation; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `chatv2-resume-persistence-wiring` | 0.55 | n/a (1 pt) | KEEP pending validation (57.128 ratio ~1.13 near band-top IN band; tiny mirror-wiring but the HITL drive-through SETUP dominated wall-clock; if a 2nd HITL-drive-through sprint lands > 1.20 → 0.65; → calibration-log §1) |
-| `chatv2-ledger-tool-roundtrips-wiring` | 0.55 → **0.85** (re-pointed Sprint 57.129) | n/a (1 pt) | KEEP 0.85 pending validation (57.129 1st pt ~1.9 OVER at 0.55 → re-point 0.85; code on-budget, the drive-through (HITL setup + content-filter chase) dominated; if a 2nd lands < 0.7 at 0.85 → lower; → calibration-log §1) |
-| `chatv2-resume-ledger-persist-wiring` | 0.70 → **0.85** (re-pointed Sprint 57.132) | n/a (1 pt) | KEEP 0.85 pending validation (57.132 1st pt ~1.4-1.6 OVER at 0.70 → re-point 0.85; tiny code + a mandatory HITL drive-through + a Leg-2 output-escalate dead-end; if a 2nd lands < 0.7 at 0.85 → lower; → calibration-log §1) |
-| `chatv2-userstop-resume-durability` | 0.60 | n/a (1 pt) | KEEP pending validation (57.143 ratio ~1.0 IN band; real-code core (own-session refactor + RLS + cancel + FE) held the 0.60 — the ceremony risk did NOT fire; if a 2nd Stop/HITL-drive-through-heavy sprint lands > 1.20 → 0.85; → calibration-log §1) |
-| `subagent-child-turnstream-nesting` | 0.55 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.96 ratio ~0.9-1.1 IN band; Cat 11×12 multi-layer feature — new wrapper event + executor forward + frontend store/render, parent-direct) |
-| `chatv2-fatal-terminate-wire-surface` | 0.55 | n/a (1 pt) | KEEP single-data-point (57.130 ratio ~1.29 slightly OVER band-top; cross-stack code on-budget, the drive-through trigger hunt = the over-run; if a 2nd *-wire-surface lands > 1.20 → 0.65; → calibration-log §1) |
-| `multi-model-profile-spike` | 0.55 | ~1.0 (2 pt) | KEEP — 57.97 ~0.93 + 57.109 ~1.1-1.2 both IN band (2-consec). Shape: a ChatClient consumer retiered to cheap + cost attribution + drive-through, parent-direct (57.109 C2: compaction retier + `_compaction` ledger mirror + 2 env knobs; the upper-edge ratio = the dt discovery loop — D-DAY3-1 semantic-unreachable finding forced a knob pivot) |
-| `subagent-child-governance` | 0.55 | n/a (1 pt) | KEEP pending validation (57.110 B4 ratio ~1.1-1.2 IN band upper edge; composition over the proven child-loop machinery; the upper edge = the dt discovery loop (popen fix-forward + re-drive); → calibration-log §1) |
-| `verification-in-loop-spike` | 0.60 | n/a (1 pt) | KEEP pending 2-3 sprint validation (Sprint 57.98 ratio ~0.92 IN band; Cat 1×10×7×12 loop.py-core new-domain spike — in-loop verify gate + durable counter on checkpoint metadata + wrapper retire + drive-through, parent-direct; agent_factor 1.0) |
-| `verification-context-hygiene-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.136 ratio ~1.0 IN band; real-code spike (loop branch + env wire + A/B harness), A/B verdict KEEP default; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `verification-keycondition-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.138 ratio ~0.98 IN band; ZERO src change — a template data file + harness; the ~3 hr harness core held the 0.60 (57.137 lesson); if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `task-primitive-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.140 ratio ~0.95-1.0 IN band; full vertical slice anchored to skills-system-spike 0.60 — every pipeline had a precedent; drive-through STRONG PASS; if a 2nd lands > 1.20 → 0.70; → calibration-log §1) |
-| `task-primitive-dag-spike` | 0.60 | ~1.0-1.1 (2 pt) | KEEP — 2 pts IN band (57.156 ~0.95-1.0 + 57.162 ~1.0-1.1; serde-transparent reuse of the 57.140 machinery; the 57.162 upper edge = drive-through staging (Risk-E + Playwright recovery); if a 3rd DAG-family w/ drive-through lands > 1.20 → 0.70; → calibration-log §1) |
-| `scheduler-cross-burst-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.157 ratio ~1.15-1.3 near band-top; real-code core held the 0.60 — the over-edge = drive-through env-resolution detective work (first-session cost); if a 2nd scheduler-* lands > 1.20 → 0.70; → calibration-log §1) |
-| `memory-vector-recall-precision-ab-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.158 ratio ~1.0-1.05 IN band; ZERO-src A/B harness, verdict semantic-wins (+80pp recall@k); ran clean — deterministic cosine, no re-drive; if a 2nd *-ab-spike lands > 1.20 → 0.75; → calibration-log §1) |
-| `chatv2-compaction-drivethrough-surface` | 0.85 | n/a (1 pt) | KEEP pending validation (57.159 ratio ~1.06 IN band; anchored to chatv2-inspector-existing-field-surface 0.85 — tiny-code + full-ceremony + mandatory drive-through; if a 2nd lands > 1.20 → 1.0 — long-conversation drive-through staging is the variance driver; → calibration-log §1) |
-| `compaction-tool-anchored-masking-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.160 ratio ~1.0 IN band; masker mode + A/B harness held the 0.60; the wall-clock driver = the Day-3 drive-through discovery loop; if a 2nd lands > 1.20 → 0.75; → calibration-log §1) |
-| `compaction-structural-realcount-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.161 ratio ~1.0 IN band; mirrored the preclear pattern 1:1, drive-through first try; if a 2nd lands > 1.20 → 0.75, if < 0.7 → 0.50; → calibration-log §1) |
-| `passk-reliability-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.141 ratio ~1.0 IN band; ZERO-src-edit 4-axis harness — the real-code core held the 0.60; if a 2nd lands > 1.20 → 0.75 — the 4-axis breadth is the variance risk; → calibration-log §1) |
-| `otel-genai-semconv-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.142 ratio ~0.95-1.0 IN band; translation-at-tracer schema mapping + conformance harness, fixed a latent token-attr bug; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `layered-compaction-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.139 ratio ~0.97 IN band; 2 new compactors + yield harness = a real-code core, LLM-free ACON band verified; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `verification-memory-grounding-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.153 ratio ~1.0 IN band; TransientState-field design (0 verifier-impl churn) + A/B fabrication-catch 0→100%; if a 2nd lands > 1.20 → 0.75 — the 2-leg drive-through staging is the variance risk; → calibration-log §1) |
-| `guardrail-restrict-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.137 ratio ~0.97 IN band; the ceremony risk did NOT fire — a real-code core holds the spike mult, a ~10-line surface change needs ~0.85 (the 57.137 lesson); if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `tool-autofix-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.165 ratio ~1.0-1.08 IN band; self-validating drafter + 3-kind splicer held the 0.60; NO drive-through (dev/CI tooling) — real-Azure smoke instead; if a 2nd lands > 1.20 → 0.75; → calibration-log §1) |
-| `tool-reflection-and-lint-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.144 ratio ~1.05-1.1 IN band upper edge; the upper edge = the user-approved +40-param expansion, not ceremony; lesson: a delegated-agent gate MUST include flake8 E501; if a 2nd lands > 1.20 → 0.75; → calibration-log §1) |
-| `tool-reflection-drivethrough-evidence-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.163 ratio ~1.0 IN band; the Day-0 方案-A re-scope (rare branch near-unreachable → gate-only) dropped drive-through staging, net on-budget; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `verification-trace-and-benchmark-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.111 ratio ~1.0-1.1 IN band upper edge; loop trace-threading + a greenfield eval harness; the over-edge = the dt+tooling discovery loop, same shape as 57.109/110; → calibration-log §1) |
-| `loop-pause-point-feature` | 0.50 | n/a (1 pt) | KEEP pending validation (57.99 ratio ~0.93 IN band; the 4th pause leg A2 verification-ESCALATE; 0.50 = the ~0.40 pause-leg baseline + the bounded REJECT continuation; → calibration-log §1) |
-| `skills-system-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.113 ratio ~0.94 IN band; greenfield Cat 5 module + lazy-load tool + main-flow wiring; a clean Day-0 三-prong kept it IN band; → calibration-log §1) |
-| `per-tenant-catalog-table-backed` | 0.60 | n/a (1 pt) | KEEP pending validation (57.114 ratio ~0.92 IN band; DB-backed overlay — table + RLS + CRUD + FE tab; the backend wiring was 1 line; parent-direct despite the plan's partial; → calibration-log §1) |
-| `config-validation-hardening` | 0.55 | n/a (1 pt) | KEEP pending validation (57.117 ratio ~0.95-1.0 IN band; write-path guardrails on the 57.114 catalog, NO migration; if a 2nd hardening sprint diverges > 30% → re-point; → calibration-log §1) |
-| `skills-bundled-script-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.118 ratio ~0.92 IN band; a bundled script via the existing SandboxBackend — 2 Day-0 scope-reducing refinements held; drive-through PASS in a real DockerSandbox; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `skills-admin-readonly-surface` | 0.55 | n/a (1 pt) | KEEP pending validation (57.119 ratio ~0.97 IN band; a read-only endpoint + FE section/modal; the only friction = the modal a11y lint ~10 min; if a 2nd read-only-surface diverges > 30% → re-point; → calibration-log §1) |
-| `skills-slash-command-fullstack` | 0.55 | n/a (1 pt) | KEEP pending validation (57.115 ratio ~1.0 IN band; the greenfield FE slash-autocomplete offset by a light backend mirror; the drive-through proved deterministic injection; → calibration-log §1) |
-| `frontend-feature-with-event-wire-addition` | 0.55 | ~1.16 (4 pt) | KEEP — 3-consec validated (57.100/108/116 IN band); 57.164 ~1.4-1.55 single over-point (a drive-through-found terminate-before-emit scope expansion); if a 2nd event-surface w/ mandatory drive-through > 1.20 → propose -with-drivethrough-trigger-hunt ~0.75; → calibration-log §1 |
-| `chatv2-inspector-existing-field-surface` | 0.55 → **0.85** (re-pointed Sprint 57.120) | ~0.87 (3 pt) | KEEP 0.85 — 3 pts IN band VALIDATE the class (57.120 ~1.6 OVER at 0.55 → re-point 0.85; 57.131 ~0.82-0.93 + 57.133 ~0.94-1.03 confirm); a tiny-code + full-ceremony parent-direct sprint sits ~0.85, NOT 0.45-0.55; → calibration-log §1 |
-| `loop-injection-primitive-spike` | 0.55 | n/a (1 pt) | KEEP pending validation (57.101 B1 IN band; a cross-stack new primitive (inbox ABC + drain seam + new event TYPE, codegen 23→24) but each layer thin over proven machinery → 0.55; → calibration-log §1) |
-| `subagent-teammate-multiturn-spike` | 0.55 | n/a (1 pt) | KEEP pending validation (57.102 B2a ratio ~0.95-1.0 IN band; reuses 3 proven assets vs building the child-loop machinery → 0.55 under the 0.60 sibling; → calibration-log §1) |
-| `subagent-inject-to-teammate` | 0.55 | n/a (1 pt) | KEEP pending validation (57.103 B2b ratio ~1.15-1.25 slightly OVER; a build-then-revert tax — the drive-through found the inject UI un-drivable → US-4/6 built then removed per Option A; → calibration-log §1) |
-| `config-tiering-model-policy-spike` | 0.60 | ~0.98 (2 pt) | KEEP — validated 2-consec (C1 57.104 ~0.9-0.95 + C3 57.106 ~1.02 both IN band); the full-stack config-tiering family — blended full-stack so NO single agent_factor; → calibration-log §1 |
-| `transcript-retention-apply-spike` | 0.60 | n/a (1 pt) | KEEP pending validation (57.134 ratio ~1.0-1.1 IN band; a Day-1 pivot dropped an AP-6 parallel-config trap — the write-then-drop offset the saved config work; if a 2nd diverges > 30% → re-point; → calibration-log §1) |
-| `scheduled-job-mirror-spike` | 0.55 → **0.85** (re-pointed Sprint 57.135) | n/a (1 pt) | KEEP 0.85 pending validation (57.135 1st pt ~1.4-1.5 OVER at 0.55 → re-point 0.85; the mirror-code was small but the background-job drive-through ceremony (a Risk-E orphan hunt) dominated; if a 2nd lands < 0.7 at 0.85 → lower; → calibration-log §1) |
-
-> Collapsed/closed historical classes (`frontend-mockup-strict-rebuild — historical`; `frontend-verbatim-css-repoint` pre-57.38 single-baseline, CLOSED Sprint 57.38) → calibration-log.md §1. For verbatim-css-repoint use `-simple` (0.50) or `-with-extras` (0.65) per criteria above.
-
-#### Active Agent Delegation Factor Modifier (ACTIVATED 2026-05-25 — Sprint 57.42 retro structural decision per `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`)
-
-> **Per-sprint activation/validation history moved** (REFACTOR-005, 2026-05-31): activation evidence, tier-2/3/4 split evolution, per-sprint history (Sprint 57.42→57.62), deprecated baselines → [`calibration-log.md` §2](../../docs/03-implementation/agent-harness-execution/calibration-log.md). Below = active rules only (Status + Formula tier-4 table + When + Rollback + Escalation + Tracking discipline).
-
-**Status**: **ACTIVE — Option A multiplicative `agent_factor` coefficient with mid-band start `0.55`**. Closes `AD-Sprint-Plan-Agent-Delegation-Factor-Modifier`. Activation criteria FULLY MET at Sprint 57.42 retro Q4 (5 cross-class data points + 4 consecutive `mockup-strict-rebuild` agent-delegated < 0.7).
-
-**Hypothesis (validated)**: code-implementer agent-delegated frontend work shows ~3-5× speedup vs the human-rewrite cadence the bottom-up estimates assume. Existing per-class multipliers (0.45-0.85) bake in a human-cadence haircut; agent-delegated sprints consistently undershoot the calibrated band lower edge because the haircut isn't enough. Validated by 5 data points (full activation evidence → calibration-log.md §2).
-
-**Formula** (applies from Sprint 57.43+ onwards):
-
-```
-effective_calibrated_hours = bottom_up × scope_class_multiplier × agent_factor
-
-where agent_factor = {
-  human (default):      1.0
-  agent-delegated (tier-4 sub-class table — Sprint 57.55 retro Q4 tier-4 SPLIT ACTIVATED effective 2026-05-28 onwards):
-    mechanical-pattern-reuse-heavy:               0.30   (≥ 4 mechanical repetitions of the same template in 1 sprint; KEEP — 57.49 retroactive 0.21 + 57.60 1st forward pt ~1.09 IN band; if a future ≥20×-repetition sprint at 0.30 lands < 0.7 → consider a -high-repetition tier; evidence → calibration-log §2)
-    mechanical-greenfield-port-style:             0.45   (single NEW component-pair via mirror-port of existing service shape; predecessor template ≥ 95% internalized; NO NEW Pydantic schema design / UX state design — RESERVED for future port-only sprints)
-    mechanical-greenfield-design-decisions:       0.65   (single NEW component-pair WITH new Pydantic schema + UX-state design; tier-4 split VALIDATED 57.56 1.02 + 57.57 1.15 IN band; WATCH: 57.61 0.74 + 57.62 0.77 = 2 consec below cross-shape → next -design-decisions pt < 0.85 → tighten 0.65 → 0.55 (AD-AgentFactor-DesignDecisions-Below-Band-Watch); evidence → calibration-log §2)
-    mixed-multidomain-bundle-mechanical:          0.45   (3+ independent tracks WITH a mechanical pattern-reuse component; tightened 0.65 → 0.45 effective 57.60+ after 57.58 + 57.59 2-consec < 0.7; if the next pt under 0.45 is also < 0.7 → escalate 0.30 OR fold into mechanical-pattern-reuse-heavy; evidence → calibration-log §2)
-    mixed-multidomain-bundle-non-mechanical:      1.0    (3+ independent tracks of pure audit/docs/rules — NO mechanical reuse; tier-3 split effective 2026-05-27 after 57.51 + 57.52 both > 1.20 at 0.65; evidence → calibration-log §2)
-  partial (20-79% via agent):          0.75   (linear interpolation)
-  human (<20% via agent):              1.0
-  History: 0.55 (57.42 activated) → 0.45 (57.44 tighten) → 0.65 (57.46 rollback) → tier-2/3/4 Option-B sub-class splits (57.48 / 57.50 / 57.52 / 57.55) — full history + rationale → calibration-log §2
-}
-```
-
-**When `agent-delegated` applies**: ≥ 80% of Day 1 work via code-implementer agent (or equivalent). 20-79% = `partial` (apply `agent_factor = 0.75` linear interpolation; record explicit tag in retro Q2). < 20% = `human` (apply `agent_factor = 1.0`; existing class multiplier alone).
-
-**Rollback rule** (3-sprint window — parallel to existing `When to adjust the multiplier` discipline):
-- If activated factor produces **2 sprints with `actual/committed-with-agent-factor` ratio < 0.7** → tighten to `0.45`
-- If activated factor produces **1 sprint with ratio > 1.20** → roll back to `0.65` (single-data-point caution)
-- If activated factor produces **≥ 2 sprints with ratio > 1.20** → roll back to `1.0` (drop the modifier — agent delegation didn't actually accelerate; class-multiplier alone sufficient)
-
-**Escalation to Option B** (per-class sub-class split — fallback if Option A undershoots specific classes):
-- If `0.55` produces ratio < 0.7 OR > 1.20 for **≥ 2 specific classes** over 3-sprint window → switch from Option A to Option B per-class split (add `+ agent-delegated` sub-row for each high-volume class; proposed baseline ranges: `-with-extras` 0.30-0.40 / `mockup-strict-rebuild` 0.25-0.35 / `verbatim-css-repoint -simple` 0.25-0.30; matches existing matrix granularity)
-
-**Tracking discipline** (MANDATORY from Sprint 57.43+):
-
-Each agent-delegated sprint MUST record in retrospective Q2:
-1. `actual/bottom-up` ratio (existing)
-2. `actual/committed` ratio (now `committed = bottom_up × scope_class_mult × agent_factor`)
-3. **NEW**: explicit `agent-delegated: yes / no / partial` tag (≥ 80% = `yes`; 20-79% = `partial`; < 20% = `no`)
-
-Sprint plan §Workload Calibration MUST state estimate in the **four-segment form** when agent delegation is anticipated:
-
-> Bottom-up est ~X hr → class-calibrated commit ~Y hr (mult Z) → agent-adjusted commit ~Y' hr (agent_factor 0.55)
-
-where `Y' = Y × 0.55 = X × Z × 0.55`. See §Workload Calibration §Four-segment form above.
-
----
+> **Read [`calibration-matrix.md`](../../docs/03-implementation/agent-harness-execution/calibration-matrix.md) at the two moments that need it**: (1) **plan drafting** — the 3/4-segment §Workload forms above REQUIRE the scope-class multiplier + agent_factor tier from that table (the section cannot be completed without the lookup); (2) **Day 4 closeout** — append/update your class row THERE (≤ 1 line ~250 chars; full narration → calibration-log §1, per the fill-in skeleton in the frozen checklist template). Hygiene is lint-enforced: `scripts/lint/check_rules_hygiene.py` (12th in run_all) fails any matrix row > 400 chars and any always-loaded rule file over its size budget — the mechanical guard REFACTOR-005/-009 lacked.
 
 ### Step 2: Create Checklist File
 
@@ -319,93 +175,14 @@ where `Y' = Y × 0.55 = X × Z × 0.55`. See §Workload Calibration §Four-segme
 - Sprint 55.5 Day 0-2 — **5 wrong-content drifts** (D1+D2+D4+D5+D7) caught via AD-Plan-3 first application; ~55 min cost prevented ~3-4 hr re-work (4-8× ROI)
 - Sprint 55.6 Day 0-3 — **11 wrong-content drifts** (D1-D11) caught via AD-Plan-3 second through sixth applications; ~75 min cost prevented ~9-10 hr re-work + 2 production-grade bugs (7-8× quantitative + 2 critical correctness saves)
 
-#### Required actions (Day 0, before Day 1 code)
+#### Required actions (Day 0, before Day 1 code) — full procedures MOVED to on-demand (REFACTOR-011, 2026-07-14)
 
-The verify is a **three-prong grep pass** (+ optional Prong 2.5 sub-prong for frontend page sprints); all prongs are mandatory when applicable (Prong 2.5 only when sprint involves frontend page re-point / restructure with existing child-component tree; Prong 3 only when sprint touches DB schema / migration / ORM models):
+The verify is a **three-prong grep pass** (+ Prong 2.5 sub-prong for frontend page sprints); all prongs are mandatory when applicable. **Read [`docs/rules-on-demand/day0-plan-verify.md`](../../docs/rules-on-demand/day0-plan-verify.md) at every Day 0** for the full prong procedures + drift-class grep tables + ROI evidence + worked examples. Summary:
 
-##### Prong 1 — Path Verify (AD-Plan-2 from Sprint 55.3)
-
-Every file path mentioned in plan §File Change List or §Technical Spec → `Glob` or `ls` to confirm exists / does not exist as expected.
-
-- New files (creates): `Glob("path/to/new_file.py")` returns 0 results
-- Edited files (edits): `Glob("path/to/existing.py")` returns 1 result
-- DB tables: check `infrastructure/db/models/*.py` + `alembic/versions/*.py`
-- Fixture paths: check `tests/**/conftest.py`
-- Imports / re-exports: confirm package-level `__init__.py` if plan asserts exposure
-- Public ABC methods: read the actual ABC file to confirm signature
-- Test-infra files (pytest markers, fixtures, e2e specs) cited in plan §Technical Spec / §Acceptance — Glob-verify they exist, NOT just product files. Sprint 57.66 D-DAY0: a phantom `test_chat_e2e_real_llm.py` + `real_llm` marker propagated across 3 plans before a Prong-1 sweep caught they never existed (`AD-Day0-Prong1-TestInfra-File-Verify`).
-
-##### Prong 2 — Content Verify (AD-Plan-3 promoted Sprint 55.6)
-
-Every plan §Technical Spec / §Background factual claim about existing code → **Grep** for the asserted symbol/pattern in real source. Path-verify alone (Prong 1) is **insufficient**: the file exists, but its body may have diverged from the plan's claim.
-
-Common drift classes and matching grep query patterns:
-
-| Drift class | Plan claim pattern | Grep verify pattern |
-|-------------|--------------------|---------------------|
-| **Claimed-but-unwired entry points** | "X is dead state" / "Y attribute is unused" | `grep -n "self\._{attribute}\b" {target_file}` — count call sites vs assignments (≥1 assignment / 0 call → confirmed dead) |
-| **Claimed-but-missing imports** | "Z is publicly re-exported" / "consumer uses A" | `grep -rn "import {symbol}\|from .* import .*{symbol}" {target_dir}` — confirm import sites |
-| **Claimed-but-renamed symbols** | "B was renamed to C" / "D class extends E" | `grep -rn "{old_name}\|{new_name}\|class .* {parent}" {target_dir}` — detect rename / inheritance drift |
-| **Claimed-but-non-existent ABCs** | "extend ABC F" / "add G enum case" | `grep -rn "class F\|class G\|F\.{member}" {target_dir}` — confirm ABC actually exists before planning extension |
-| **Claimed-but-wrong-units fields** | "uses backoff_seconds" / "stored as float" | `grep -n "{field_name}: " {target_file}` + read 1-3 lines — confirm unit / type assumption |
-| **Claimed-but-silent-constraint-delta** | "frontend re-point shipped" / "+N tests added" / "bundle size unchanged" | `git diff $(git merge-base main HEAD)..HEAD -- 'frontend/src/**' \| grep -cE '^\+[^+].*oklch\('` — count delta against `HEX_OKLCH_BASELINE` in `check-mockup-fidelity.mjs`; same pattern applies to AP-N detector counts, Vite bundle size byte delta, pytest/Vitest count deltas. In agent-delegated migration sprints, the agent typically nails the visual/code change BUT silently exceeds baseline-constrained metrics (HEX_OKLCH literal count, AP-N count, bundle KB). Day 0 grep surfaces the delta upfront so baseline bump lands in same Day 1 commit (instead of next PR's CI hotfix). ROI evidence: Sprint 57.49 silent HEX_OKLCH +1 → PR #200 hotfix `74ed8a2f` post-merge fix-forward; AUDIT-001 (Sprint 57.51 Track C) Verdict A confirmed intended verbatim port + this rule extraction. |
-| **Stale-docstring-Karpathy-3** | docstring/MHist claims "X uses Y" / "TODO remove Z next sprint" / "deprecated since Sprint N" | `grep -nE '"""\|^#\|^//\|^/\*' {target_file}` to find docstring/comment regions; then cross-grep the referenced symbol/file against repo reality. Docstrings + module-level comments + MHist entries are "code" for the dead-code rule (Karpathy §3) — when they reference symbols/features that have been removed, they're orphan claims that mislead Day 0 reviewers. ROI evidence: Sprint 57.50 D-DAY0-8 — `_fixtures.ts` L21 docstring referenced SEATS_FIXTURE which Sprint 57.49 had already removed; Day 0 caught the stale comment, Sprint 57.50 task 1.2.4 scope shrunk from ~5 min Day 1 surprise rework to ~1 min docstring cleanup. |
-| **Claimed-but-missing-storage-path** (Sprint 57.57 PROMOTION) | "tenant overrides stored at `Tenant.<col>`" / "<Resource>OverrideStore table exists" / "PUT writes to dedicated `tenant_<resource>` table" | `grep -rn "meta_data\[.<key>.\]\|<Resource>Service\|class .*<Resource>.*Store\|tenant_<resource>" backend/src/` — discover actual storage architecture (dedicated table vs JSONB-on-registry-table vs JSONB-on-tenants-meta_data) BEFORE plan §4.1 commits to a Pydantic write shape. ROI evidence (3-data-point): Sprint 57.55 D-DAY0-B 🔴 RED (plan assumed `tenants.meta_data["tenant_overrides"]` → reality `feature_flags.tenant_overrides[str(tid)]` JSONB ON registry table; pivot saved ~30-45 min); Sprint 57.56 D-DAY0-A 🔴 RED (plan assumed Quotas has override storage → reality PlanQuota per-Plan template immutable; Option B `tenants.meta_data["quota_overrides"]` JSONB direct write; pivot saved ~60 min vs plan v0 abort); Sprint 57.57 D-DAY0-A ✅ GREEN inverse-validation (storage path `tenant.meta_data["rate_limits"]` established Sprint 57.48 Track D → no plan pivot needed; rule produces actionable outcome in BOTH directions). Codified Sprint 57.57 closeout per `AD-Day0-Prong2-Phase58-WriteSide-Resource-Storage-Grep` PROMOTION. |
-| **Claimed-but-missing-canonical-service** (Sprint 57.57 PROMOTION) | "extend `<Resource>Service.set_override` method" / "add `<Resource>Store.put()` upsert" / "call canonical service for audit chain auto-emit" | `grep -rn "class .*<Resource>Service\|class .*<Resource>Store\|def set_\|def put_\|def update_" backend/src/<scope>/` — discover canonical service availability (exists → use canonical method for cleaner audit chain + cache invalidation; doesn't exist → direct ORM UPDATE + manual `append_audit` pattern Sprint 57.3 + 57.56 precedent). ROI evidence (2-data-point both directions actionable): Sprint 57.55 D-DAY0-T 🆕 NOTABLE positive direction (`FeatureFlagsService.set_tenant_override` Sprint 56.1 IS canonical setter auto-emitting audit chain → clean V2 service path; REMOVED `AD-FeatureFlags-PerFlag-AuditLog-Phase58` carryover positive side-effect); Sprint 57.56 D-DAY0-D 🆕 NOTABLE inverse direction (NO canonical service for Quotas → architectural simplification path = direct ORM UPDATE + manual `append_audit`; Sprint 57.3 PATCH precedent); Sprint 57.57 D-DAY0-B inverse continued (NO canonical service for RateLimits → same direct ORM path as Sprint 57.56). Both directions produce actionable plan pivots — codified Sprint 57.57 closeout per `AD-Day0-Prong2-CanonicalService-Grep` PROMOTION. |
-| **Claimed-but-nested-shape-mismatch** (Sprint 57.60 PROMOTION) | "stored as `{resource, window, limit}`" / "config items are typed objects" / "the JSONB holds `{key: value}` dicts" | when the plan asserts the NESTED shape of a stored blob (JSONB / dict / list-of-dicts), READ the actual Pydantic model / dataclass / TypedDict BODY — do NOT infer from the key name alone. `grep -rn "class .*<Model>\|<field>:" backend/src/` to locate, THEN Read the model body to confirm the real nested shape. ROI evidence (2-data-point): Sprint 57.58 D-DAY1-1 (stored `meta_data["rate_limits"]` shape is UI display strings `{label, value}` e.g. `{"label":"API requests","value":"100 / min"}` NOT the assumed `{resource, window, limit}` — the runtime gate had to normalize via `parse_rate_limit_item`; caught mid-Day-1); Sprint 57.59 reinforced (both the live normalizer + the inline `0019` migration parser keyed off the `{label, value}` shape, not the assumed typed object). Reading the model body at Day 0 surfaces the real shape before plan §4 commits to a parse/write contract. Codified Sprint 57.60 closeout per `AD-Day0-Prong2-Nested-Shape-Read` PROMOTION. |
-| **Claimed-but-flat-codegen-shape** (Sprint 57.67 — 4 data points, fold-in) | "codegen TS event/DTO types from existing Python types" / "interface mirrors the dataclass" | when GENERATING consumer types/schemas from existing producer types, capture the STRUCTURAL SHAPE (envelope nesting), NOT just field names — Read the producer/serializer body first. Sprint 57.67 stage-1 emitted flat `{type, ...fields}` but the wire is nested `{type, data:{...}}`; recurred 4× → `AD-Day0-Codegen-Existing-Shape-Capture`. Verify the wire envelope nesting before drafting the consumer type. |
-| **Claimed-but-no-live-producer** ("fill/wrap/instrument every X" scopes; Sprint 57.71 + 57.72) | "wrap every loop span" / "fill all N Inspector tabs" / "instrument every call site" | for "fill/wrap/instrument every X" scopes, grep that EACH X has a live producer / call-site BEFORE planning to surface it — else the slot is an AP-4 Potemkin. Sprint 57.71: 2 of 6 tracer spans had no loop-level call site (deferred, not faked); 57.72: only 1 of 3 Inspector tabs had a live event producer (Tree shipped; Trace/Memory → ComingSoon). |
-
-##### Prong 2.5 — Child Component Tree Depth Audit (frontend page sprints only; AD-Plan-5 fold-in Sprint 57.40 — `chore/rules` ship via Item #2 of post-Sprint-57.39 4-AD micro-fix sequence)
-
-**Applies when**: sprint plan involves frontend page re-point / restructure where the **entry component** (e.g. `frontend/src/pages/<route>/index.tsx`) and its **child components** (e.g. `frontend/src/features/<area>/components/*.tsx`) may carry DIFFERENT vintages of styling / structure. Prong 2 scopes only to the entry component file; this sub-prong extends grep depth into the child-component tree.
-
-**Why this matters** (Sprint 57.39 D-DAY1-1 evidence): `/governance` + `/verification` entry components were migrated to mockup-ui `Tabs` primitive (closing the shell-level NEAR-PARITY), but the child components they import (`AuditLogViewer` / `VerificationList` / `CorrectionTraceView` / etc.) retained Sprint 57.5 / 57.9 / 57.11-vintage Tailwind shadcn-utility patterns. Day 0 plan-grep (Prong 2) only checked the entry component file → child drift was invisible until Day 1 code → mid-sprint scope expansion required (FIX-015 follow-up PR #183: +347 lines / 9 files).
-
-**Required grep depth-2 sweep**:
-
-For each target frontend page in plan §Technical Spec:
-
-1. **Enumerate child component tree** (depth-1): `grep -nE "import.*from.*@/features/<area>" frontend/src/pages/<route>/index.tsx` → list child component file paths
-2. **Per child file — anti-pattern grep**: run plan-relevant pattern greps against each enumerated child file. Common drift class queries:
-
-| Drift class | Plan claim pattern (in §Technical Spec) | Grep verify pattern (on each child component file) |
-|-------------|------------------------------------------|---------------------------------------------------|
-| **Shadcn-utility token residue** (AP-Phase2-C) | "page is verbatim-CSS aligned" / "Phase-2 re-pointed" | `grep -E "bg-card\|text-foreground\|border-border\|bg-muted\|text-muted-foreground" {child_file}` — non-zero = residue (FIX-012 retired `--sc-border`; FIX-015 closed governance + verification residue) |
-| **Inline `style=` missing escape comment** (STYLE.md §1 + §3) | "no inline style violations" / "STYLE.md §3 escape used" | `grep -E "style=\{\{" {child_file}` + verify each match has adjacent `eslint-disable-next-line no-restricted-syntax` comment (FIX-015 CI fail lesson: 28 sites missed by agent) |
-| **Outer wrapper artifact** (AP-Phase2-A) | "mockup has no outer wrapper" / "matches mockup root" | `grep -nE "<div style=\{\{[^}]*padding" {child_file}` — production-only padding wrappers (FIX-011 lesson — Sprint 57.19 vintage drift) |
-| **Layout-class fullBleed drop** (AP-FullBleed) | "preserves AppShellV2 chrome" / "fullBleed prop intact" | `grep -nE "fullBleed\|chat-shell\|loop-canvas\|page-head" {child_file}` (FIX-010 lesson) |
-| **Tab-shell vs monolithic structural divergence** | "matches mockup tab structure" | compare entry component's `<Tabs>` children vs mockup file's `<>` fragment / `.tabs-shell` structure — structural mirror mismatch = production tab-shell wraps mockup-monolithic content (Sprint 57.39 D-DAY1-1 root cause) |
-
-**Recursion depth**: typical N = 2 (entry → direct children). Recurse to N = 3 only when the page architecture involves nested feature-area imports (rare; e.g. `chat-v2` blocks-of-blocks).
-
-**Cost / benefit**:
-- Per-page cost: ~5-10 min (1 import-grep + N anti-pattern greps per child component)
-- Benefit: catches Sprint 57.39-class scope expansion at Day 0 instead of Day 1+ (1-5 hr saved per drift caught, depending on child count)
-- **Skip when**: scope is non-frontend, first-time scaffolding (no existing tree to audit), or pages with no `import.*@/features/` consumers (single-file pages)
-
-##### Prong 3 — Schema Verify (AD-Plan-4 promoted Sprint 57.1)
-
-**Applies when**: sprint plan introduces NEW DB tables / Alembic migrations / ORM models / DB schema fields. Path verify (Prong 1) confirms file existence; content verify (Prong 2) confirms code patterns. Neither catches **column-level schema drift** between plan-time assumed schema and reality.
-
-For every new table / migration / ORM model in plan §Technical Spec → grep DB column declarations against asserted schema before Day 1 starts:
-
-- New table columns: `grep -A 30 "CREATE TABLE {table_name}\|class {ORM}\|table_args" backend/src/infrastructure/db/` — list every column + type + nullable
-- Cross-table FK references: `grep -rn "ForeignKey.*{ref_table}\|REFERENCES {ref_table}" backend/src/infrastructure/db/` — confirm referenced table.column exists with matching type
-- Migration head version: `ls backend/src/infrastructure/db/migrations/versions/ | sort -V | tail -3` — confirm next available number not already occupied
-- RLS policy presence: `grep -A 3 "ENABLE ROW LEVEL SECURITY\|tenant_isolation_{table}" {migration_file}` — multi-tenant rule check (per `.claude/rules/multi-tenant-data.md` 鐵律)
-- Plan-asserted column drift catch: re-read plan §Technical Spec column list; for each column → grep ORM file to confirm field name + type + nullable + default match exactly
-
-Common schema drift classes:
-
-| Drift class | Plan claim pattern | Schema-grep verify pattern |
-|-------------|--------------------|----------------------------|
-| **Claimed-but-missing column** | "table X has column Y" | `grep -n "{column_name}" {orm_file}` — 0 results = drift |
-| **Claimed-but-wrong-type column** | "column Z is VARCHAR(64)" / "is NUMERIC(20, 4)" | `grep -A 1 "{column_name}" {migration_file}` — type mismatch |
-| **Claimed-but-renamed table** | "INSERT into table_a" / FK to "table_b" | `grep -rn "table_a\|table_b" backend/src/infrastructure/db/` — actual name drift |
-| **Claimed-but-occupied migration head** | "Alembic 0014_xxx" | `ls migrations/versions/ | sort -V | tail -3` — 0014 already exists → use 0015 |
-| **Missing RLS policy** | new tenant_id table without RLS | `grep "ENABLE ROW LEVEL SECURITY\|tenant_isolation_{table}" {migration}` — 0 results = lint will fail |
-| **Physical-column-vs-ORM-alias** (Sprint 57.60 PROMOTION) | "raw SQL `UPDATE tenants SET meta_data ...`" / "migration reads the `meta_data` column" | when a migration / raw SQL touches a column whose ORM attribute is an ALIAS (`mapped_column("physical_name", ...)`), the raw SQL MUST use the PHYSICAL column name, not the ORM attr. `grep -n "mapped_column(\"" backend/src/infrastructure/db/models/*.py` — any `mapped_column("X", ...)` where `X` ≠ the Python attr name = alias; raw SQL must quote `"X"`. ROI evidence (2-data-point): Sprint 57.59 D-DAY1-1 (tenants JSONB ORM attr `meta_data` is `mapped_column("metadata", ...)` in `identity.py`; the `0019` data-migration raw SQL had to use `"metadata"` not `meta_data` — caught mid-Day-1); Sprint 57.60 D-DAY0-M (applied pre-emptively at plan-time — `0020` raw SQL uses `"metadata"` from the start; 0 mid-sprint surprise). Codified Sprint 57.60 closeout per `AD-Day0-Prong3-Physical-Column-Read` PROMOTION. |
+- **Prong 1 — Path Verify** (AD-Plan-2): every plan-mentioned file path → Glob/ls exists-as-expected (incl. test-infra files — the 57.66 phantom-file lesson).
+- **Prong 2 — Content Verify** (AD-Plan-3): every plan factual claim about existing code → Grep the asserted symbol/pattern (drift classes incl. dead-entry-points / missing-imports / renamed-symbols / missing-ABCs / wrong-units / silent-constraint-delta / stale-docstrings / missing-storage-path / missing-canonical-service / nested-shape-mismatch / flat-codegen-shape / no-live-producer).
+- **Prong 2.5 — Child Component Tree Depth Audit** (AD-Plan-5; frontend page sprints only): depth-2 grep into imported child components for style/structure drift.
+- **Prong 3 — Schema Verify** (AD-Plan-4; DB schema in scope only): column-level grep of tables / FKs / migration-head / RLS vs plan-asserted schema (+ physical-column-vs-ORM-alias).
 
 ##### Catalog drift findings
 
@@ -420,55 +197,6 @@ In `progress.md` Day 0 entry under "Drift findings" header:
 - Findings shift scope by ≤ 20% → continue Day 1 with risk noted in §Risks
 - Findings shift scope by 20-50% → revise plan §Acceptance Criteria + §Workload, re-confirm with user
 - Findings shift scope by > 50% → abort sprint; redraft plan with reality baseline
-
-#### ROI evidence (Sprint 55.6 promotion validation)
-
-AD-Plan-3 was logged Sprint 55.4 candidate, validated Sprint 55.5 first application (5 drifts → 4-8× ROI), and **promoted to validated rule via Sprint 55.6 fold-in** based on cumulative evidence:
-
-| Sprint | Application count | Drifts caught | Cost | Benefit prevented | ROI |
-|--------|-------------------|---------------|------|-------------------|-----|
-| 55.5 | 1st (Day 0 + 1 + 2) | 5 (D1+D2+D4+D5+D7) | ~55 min | ~3-4 hr re-work | 4-8× |
-| 55.6 | 2nd-6th (Day 0-3) | 11 (D1-D11) | ~75 min | ~9-10 hr re-work + 2 production-grade bugs | 7-8× + 2 saves |
-
-**D3 critical scope reduction in Sprint 55.6 alone**: AD-Cat8-2 dropped from "design + wire ~10-12 hr" to "wire-only ~5-6 hr" — caught via content grep (Prong 2), invisible to path verify (Prong 1).
-
-**AD-Plan-4 Schema-Grep promotion ROI (Sprint 57.1 fold-in based on cumulative evidence)**:
-
-| Sprint | Schema-Grep application | Drifts caught | Cost | Benefit prevented | ROI |
-|--------|-------------------------|---------------|------|-------------------|-----|
-| 56.1 | 1st (Day 0) | 2 (D26+D27 column-level) | ~30 min | ~1-2 hr re-work | 2-4× |
-| 56.3 | 2nd (Day 0) | 1 (D6 sessions.total_cost_usd column) | ~20 min | ~1 hr re-work | 3× |
-| **Cumulative** | **2 sprints** | **3 column drifts caught Day-0** | ~50 min | ~2-3 hr re-work | 3-4× |
-
-Schema-Grep extends Prong 2 from code-pattern level to DB-column level. Without it, column drift surfaces at first migration / first ORM test run, costing 1-2 hr re-work per occurrence. With it, drift surfaces in Day 0 plan-verify pass at <30 min cost.
-
-**AD-Plan-5 Frontend-Tree-Depth promotion ROI (Sprint 57.40 fold-in based on Sprint 57.39 + FIX-015 evidence)**:
-
-| Sprint / FIX | Prong 2.5 application | Drifts caught | Cost | Benefit prevented | ROI |
-|-------------|------------------------|---------------|------|-------------------|-----|
-| Sprint 57.39 D-DAY1-1 | (pre-Prong-2.5 escape — Day 0 grep only checked entry component) | 1 drift surfaced mid-Day-1 (governance + verification child shadcn residue) | n/a (escape) | ~3-5 hr scope-expansion absorbed into follow-up PR #183 | (negative — what Prong 2.5 was designed to prevent) |
-| FIX-015 post-hoc | Manual Day 0 grep across 6 child components | 6 drift files (4 confirmed AD-list + 2 NEW: ApprovalList + DecisionModal) | ~5 min | ~3-5 hr scope-creep avoided in original Sprint 57.39 | 36-60× |
-| **Cumulative** | **2 applications** | **6 files (~28 inline-style sites secondary)** | ~5-10 min per Day 0 | scope-expansion avoidance | **20-60×** |
-
-Frontend-Tree-Depth extends Prong 2 from entry-component grep to child-component-tree grep (depth N = 2). Without it, child drift surfaces at Day 1+ during code → either mid-sprint scope expansion OR follow-up FIX PR (Sprint 57.39 → FIX-015 pattern). With it, drift surfaces at Day 0 at <10 min cost, allowing scope adjustment in plan §Technical Spec before code starts.
-
-#### Examples
-
-**Sprint 53.7 D4-D12** (9 path-drift findings cost ~1 hr re-work — _why Prong 1 exists_):
-- D4: Plan referenced `check_promptbuilder.py --root` arg behavior that did not match script
-- D7-D8: Plan assumed lint scripts would silently accept missing `--root` flag; reality = silent-OK or exit 2
-- D10-D12: Plan-stated `pytest` count baselines off by 2-5 tests vs. real repo at branch-creation time
-
-**Sprint 55.3 D1-D3** (3 path-drift findings caught _before_ Day 1 code — _Prong 1 ROI validation_):
-- D1: Plan assumed sole-mutator refactor needed for `agent_harness/`; grep showed three target patterns already grep-zero → AD-Cat7-1 scope 收斂 to enforcement test + lint
-- D2: Plan assumed `verification_span` would be created; `verification/_obs.py` already had it → AD-Cat12-Helpers-1 became `extract` (non-create)
-- D3: Plan assumed DB-backed `HITLPolicy` already partially wired; `DefaultHITLManager.default_policy` was in-memory only → AD-Hitl-7 baseline confirmed cleanly
-
-**Sprint 55.6 D3 critical catch** (Prong 2 content-verify — _why AD-Plan-3 promotion exists_):
-- 55.4 retro Q4 + 55.5 retro Q4 both narrated "AD-Cat8-2 needs full retry-with-backoff design"
-- Day-0 content grep on `loop.py:_handle_tool_error` revealed: ABC implemented, called from main exec, error_policy/error_budget/circuit_breaker ALL wired — **only `_retry_policy` attribute is dead**
-- Scope dropped from ~10-12 hr to ~5-6 hr; saved ~5-6 hr scope-creep design work
-- Path verify (Prong 1) alone could not catch this: all referenced files exist; content gap requires Prong 2 grep
 
 #### Cross-references
 
@@ -533,83 +261,7 @@ Frontend-Tree-Depth extends Prong 2 from entry-component grep to child-component
 **When NOT to apply**:
 若 sprint 是 **feature continuation sprint**（單純擴充已驗證範疇 — 例：Phase 57.4 admin tenants list 是延伸 57.3 tenant settings pattern reuse）：**不需** design note；只需 progress.md + retrospective.md。
 
-#### 8-Point Quality Gate（design note submission checklist）
-
-每個 spike-extract design note **必須**通過下列 8 條（reviewer 逐點驗證）：
-
-- [ ] **1. Section header 對應 spike user story**
-  - ❌ Generic：「OIDC overview」/「Authentication design」
-  - ✅ Specific：「US-A2: OIDC PKCE Flow as wired in Sprint 57.7」
-
-- [ ] **2. 每個技術 claim 有 file:line**
-  - ❌「we use RS256」/「JWT validated via JWKS」
-  - ✅「`JWTManager.encode()` at `backend/src/platform_layer/identity/jwt.py:42-58`」
-
-- [ ] **3. Decision rationale 含比較矩陣**
-  - ❌「Best practice」/「industry standard」
-  - ✅ 三/四欄 vendor matrix + Cost / SCIM / SAML / Decision + 否決原因
-
-- [ ] **4. Verification command（reproducible）**
-  - ✅ `pytest tests/integration/auth/test_oidc_flow.py::test_real_entra_callback`
-  - ✅ 或具體 manual reproduce step（curl + expected response）
-
-- [ ] **5. Test fixture reference**
-  - ✅ Link 到實際 test data / mock setup file
-  - ✅ 若 real-LLM 測試，標明 `pytest -m real_llm` 與 cost 估算
-
-- [ ] **6. Open invariant 明確分界**
-  - ✅「Verified in this spike: A, B, C」+「Deferred to Phase XX.Y (NOT verified): D, E, F」
-  - ❌ 將 deferred 內容寫入主 section 偽裝 verified
-
-- [ ] **7. Rollback / fallback 路徑**
-  - ✅「若設計後續證明錯，revert API routes at `auth.py` + DB column `external_id`；估 1-2 day」
-  - ✅ 識別 sentinel / fallback 是否已存在
-  - ❌ 假設「不會錯」
-
-- [ ] **8. Cross-reference 17.md single-source**
-  - ✅ 任何新 contract 必須在 `17-cross-category-interfaces.md` 對應 §section 登記
-  - ✅ 若新增 ABC，標明 owner category
-  - ❌ 在 design note 平行定義 contract（違反 single-source）
-
-#### Quality 不是頁數，是 verified ratio
-
-| 維度 | 14.md 風格（high page low quality） | Spike-extract 風格（mid page high quality） |
-|------|-------------------------------|------------------------------------------|
-| Verified ratio | 10.6% (91/862 行) | ≥ 95% |
-| 每 claim 對應 file:line | ❌ 大部分 pseudo-code | ✅ 強制 |
-| Decision rationale | ❌ 「primary IdP = Entra」無矩陣 | ✅ vendor comparison matrix |
-| Verification reproducibility | ❌ 無 | ✅ pytest command + fixture |
-| Maintenance | ❌ 半年內過時（57.5 揭示） | ✅ 隨 PR 同步 |
-| 結果頁數 | 800+ 行 | 通常 200-500（outcome，非 cap） |
-
-**禁止**：用「regulated 200-300 行」當品質替代品。重點是**禁止 speculation 充頁數**，不是壓縮 verified content。若 spike 真的學到 600 行 worth verified invariants，就寫 600 行。
-
-#### Template
-
-每個 spike-extract design note 使用 `claudedocs/templates/spike-design-note-template.md` 結構（含 8 sections：Spike Summary / Decision Matrix / Verified Invariants / Cross-Category Contracts / Open Invariants / Rollback / References / Modification History）。
-
-#### Day 4 closeout 自查 record
-
-retrospective.md 必須記錄：
-
-```markdown
-## Design Note Extract（spike sprint only）
-
-**File**: `docs/03-implementation/agent-harness-planning/<doc-number>-<topic>.md`
-**Verified ratio (estimated)**: __%
-**8-Point Quality Gate**:
-- [ ] 1. Section header
-- [ ] 2. file:line 引用
-- [ ] 3. Decision matrix
-- [ ] 4. Verification command
-- [ ] 5. Test fixture
-- [ ] 6. Open invariant 分界
-- [ ] 7. Rollback path
-- [ ] 8. 17.md cross-ref
-
-**Reviewer pass**: <user / self-review>
-```
-
+Full **8-Point Quality Gate** (per-point checklist) + the quality-is-verified-ratio table + the Day-4 retrospective self-check record format MOVED to [`docs/rules-on-demand/spike-design-note-gate.md`](../../docs/rules-on-demand/spike-design-note-gate.md) (REFACTOR-011, 2026-07-14) — **read it at every spike sprint's Day 4 closeout**. Template: `claudedocs/templates/spike-design-note-template.md`. The retrospective MUST record the 8-point self-check (format in the on-demand file).
 
 - Format:
   ```markdown
@@ -695,7 +347,7 @@ Example (good pointer):
 
 **Forbidden** ❌:
 - Dump retro Q1-Q7 content into the entry
-- List specific calibration ratio numbers (those live in subfile + `.claude/rules/sprint-workflow.md §Scope-class multiplier matrix`)
+- List specific calibration ratio numbers (those live in subfile + `calibration-matrix.md`)
 - List commit SHAs / PR numbers / Vitest counts / bundle KB sizes (in subfile + retrospective)
 - Make entry >500 char (~300 is comfortable ceiling; quality matters more than rigid limit per user 2026-05-18 — but >500 signals you're packing summary instead of pointing)
 
@@ -719,7 +371,7 @@ Example (good pointer):
 - Maintain `claudedocs/1-planning/next-phase-candidates.md` as **single-source** for open / pending items
 - Sprint plan §Carryover section (in `docs/03-implementation/agent-harness-planning/phase-XX-*/sprint-XX-Y-plan.md`) lists carryover ADs for next sprint pickup
 - Sprint retrospective.md §Carryover section accumulates per-sprint additions to the candidate pool
-- `.claude/rules/sprint-workflow.md §Scope-class multiplier matrix` tracks cross-sprint calibration trends
+- [`calibration-matrix.md`](../../docs/03-implementation/agent-harness-execution/calibration-matrix.md) tracks cross-sprint calibration trends (matrix rows lint-capped ≤ 400 chars)
 
 ### Self-Check at Sprint Closeout (Pre-Commit)
 
@@ -730,8 +382,8 @@ Before commit closeout MHist, verify:
 - [ ] **Sprint detail preserved**: Memory subfile + retrospective.md updated with full content? (YES — single-source preserved elsewhere)
 - [ ] **Carryover / open items**: Documented in next sprint plan §Carryover or `claudedocs/1-planning/next-phase-candidates.md`? (NOT in CLAUDE.md table cell)
 - [ ] **next-phase-candidates.md append** (post REFACTOR-010): full SHIPPED carryover narration → `next-phase-candidates-shipped-archive.md` (verbatim, newest-first); into `next-phase-candidates.md` only a **1-line §Shipped Sprints Pointer Index row + the open ADs into §Open Carryover ADs**. NO full SHIPPED block (file:line / drive-through / pytest counts / CHANGE-NNN / design note) in the main file — that is the REFACTOR-001/005/009/010 re-bloat anti-pattern.
-- [ ] **Calibration ratio**: Tracked in `sprint-workflow.md §Scope-class multiplier matrix`? (NOT in CLAUDE.md / MEMORY.md prose)
-- [ ] **Matrix row lean (REFACTOR-009)**: new/updated scope-class matrix row ≤ 1 line (~250 chars)? Full narration → calibration-log §1, NOT the matrix cell.
+- [ ] **Calibration ratio**: Tracked in `calibration-matrix.md` (on-demand)? (NOT in CLAUDE.md / MEMORY.md prose)
+- [ ] **Matrix row lean (REFACTOR-009/-011)**: new/updated `calibration-matrix.md` row ≤ 1 line (~250 chars — lint-enforced by check_rules_hygiene)? Full narration → calibration-log §1, NOT the matrix cell.
 
 ### Why This Policy Exists (REFACTOR-001 root cause analysis 2026-05-18)
 
