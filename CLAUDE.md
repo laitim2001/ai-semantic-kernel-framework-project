@@ -340,12 +340,12 @@ python scripts/dev.py logs docker -f
 
 | Rule | Scope |
 |------|-------|
-| `.claude/rules/sprint-workflow.md` | 5 步 sprint 流程 + Day 0 三-prong + calibration matrix |
+| `.claude/rules/sprint-workflow.md` | 5 步 sprint 流程 + Day 0 三-prong 摘要（matrix + prong 細節已移 on-demand — REFACTOR-011）|
 | `.claude/rules/file-header-convention.md` | File header + MHist 1-line max |
 | `.claude/rules/multi-tenant-data.md` | tenant_id 鐵律 + RLS + GDPR / PII |
 | `.claude/rules/anti-patterns-checklist.md` | 11 條 PR 自檢 |
 
-**📋 On-demand（11 條，需要時主動 Read `docs/rules-on-demand/X.md`）**
+**📋 On-demand（13 條，需要時主動 Read `docs/rules-on-demand/X.md`）**
 
 | Rule | Trigger |
 |------|---------|
@@ -360,8 +360,10 @@ python scripts/dev.py logs docker -f
 | `frontend-react.md` | React/TS 通用約定 |
 | `frontend-mockup-fidelity.md` | 前端頁面 / mockup port / 改設計系統 |
 | `lint-detector-authoring.md` | 寫 / 維護 / debug AP-N lint detector |
+| `day0-plan-verify.md` | 每個 sprint 的 Day 0（三-prong 完整程序）|
+| `spike-design-note-gate.md` | spike sprint 的 Day 4 closeout（8-point gate）|
 
-> 完整 trigger 表 + 任務情境配對見 [`.claude/rules/README.md`](.claude/rules/README.md)。
+> 完整 trigger 表 + 任務情境配對見 [`.claude/rules/README.md`](.claude/rules/README.md)。Calibration 乘數查表（plan §Workload / closeout 時 Read）：`docs/03-implementation/agent-harness-execution/calibration-matrix.md`（REFACTOR-011）。
 
 ### Quick Commands
 

@@ -72,6 +72,14 @@ jobs:
       - name: Lint 7 — event schema codegen parity
         run: python scripts/lint/check_event_schema_sync.py
 
+      # REFACTOR-011 (2026-07-14): always-loaded rule hygiene — size budgets on
+      # CLAUDE.md + .claude/rules/* and a 400-char cap on calibration-matrix.md
+      # table rows. Prevents the REFACTOR-005/-009 matrix re-bloat cycle from
+      # recurring (full narration belongs in calibration-log.md §1, never in the
+      # always-loaded rule files).
+      - name: Lint 8 — always-loaded rules hygiene (size budgets + matrix rows)
+        run: python scripts/lint/check_rules_hygiene.py
+
       - name: Lint rule unit tests (PASS + FAIL fixtures)
         working-directory: backend
         run: pytest tests/unit/scripts/lint -v

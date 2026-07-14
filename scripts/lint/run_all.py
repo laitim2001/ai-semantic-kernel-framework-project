@@ -9,6 +9,7 @@ Category: Cross-cutting / DevOps tooling
 Scope: Sprint 53.7 US-1 (closes AD-Lint-1) / Sprint 55.3 (adds 7th lint via AD-Cat7-1)
 
 Modification History:
+    - 2026-07-14: REFACTOR-011 — add 12th lint check_rules_hygiene (always-loaded rule budgets)
     - 2026-06-25: Sprint 57.144 — add 11th lint check_tool_descriptions (research #7 Half A)
     - 2026-06-02: Sprint 57.67 — add 10th lint check_event_schema_sync (A-5b codegen parity)
     - 2026-05-08: Sprint 57.6 Day 3 — add 9th lint check_ap4_frontend_placeholder (closes AD-Reality-5)
@@ -87,6 +88,11 @@ LINTS: list[tuple[str, list[str]]] = [
     # placeholder-free description >= MIN_DESCRIPTION_LEN + a description on every
     # input_schema property — a guardrail against tool-description rot.
     ("check_tool_descriptions.py", ["--root", "backend/src"]),
+    # REFACTOR-011 (2026-07-14): always-loaded rule hygiene — size budgets on
+    # CLAUDE.md + .claude/rules/* and a 400-char cap on calibration-matrix.md
+    # rows. The mechanical guard against the REFACTOR-005/-009 re-bloat cycle
+    # (closeout AIs copying the prior sprint's bloated matrix cell as template).
+    ("check_rules_hygiene.py", []),
 ]
 
 

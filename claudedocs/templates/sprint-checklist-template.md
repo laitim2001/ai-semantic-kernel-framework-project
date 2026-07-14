@@ -74,7 +74,8 @@ _(MANDATORY for any user-facing surface; for pure-backend/infra sprints replace 
 
 ### 4.2 Closeout
 - [ ] retrospective.md Q1-Q7 + calibration (`<class>` <mult>, <Nth data point>; flag if ratio out of band → re-point)
+- [ ] calibration-matrix.md row — fill THIS skeleton, ≤ 1 line ~250 chars (lint-capped 400; narration → calibration-log §1 ONLY): `| \`<class>\` | <mult> | <mean> | KEEP/re-point (<sprint> ratio ~<Y> IN/OVER band; <one clause>; if 2nd >1.20 → <Z>; → calibration-log §1) |`
 - [ ] Final gate sweep: mypy · run_all · pytest · Vitest · mockup · build · lint · LLM-SDK-leak
-- [ ] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSE the AD) · sprint-workflow matrix (`<class>` row / data point)
+- [ ] Navigators: CLAUDE.md Current-Sprint + Last-Updated · MEMORY.md pointer + subfile · next-phase-candidates (CLOSE the AD) · calibration-matrix.md (`<class>` row / data point — see skeleton above)
 - [ ] Anti-pattern self-check (retro Q5): AP-2/3/4/6/8/11 → violations; v2 lints <N>/<N>
 - [ ] **Commit** → ⏳ PR push + open → CI → merge: PENDING USER CONFIRMATION (push is outward-facing per Developer Preferences) → post-merge status flip after gh-verified MERGED
