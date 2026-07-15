@@ -69,7 +69,10 @@ async def test_recent_sessions_returns_session_hints() -> None:
     h = hints[0]
     assert h.layer == "session"
     assert h.time_scale == "long_term"
-    assert h.summary == "prior work"
+    # AD-Chat-Default-Persona-Demo-Leak: session hints now carry a dated PRIOR-session
+    # marker so the agent distinguishes a prior session from the current one.
+    assert "prior work" in h.summary
+    assert h.summary.startswith("[Prior session, ")
     assert h.hint_id == sid
     assert h.full_content_pointer == f"memory_session_summary:{sid}"
 
