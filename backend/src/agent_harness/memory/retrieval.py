@@ -233,12 +233,20 @@ class MemoryRetrieval:
             if unresolved:
                 joined = "; ".join(str(u) for u in unresolved)
                 summary_text = f"{summary_text} (open: {joined})"
+            summary_text = summary_text[:200]
+            # AD-Chat-Default-Persona-Demo-Leak (2026-07-15): prefix a dated
+            # PRIOR-session marker so the agent distinguishes a prior session from the
+            # current one — the drive-through saw the agent read a prior-session INC as
+            # happening "in this session". updated_at is the rolling summary's last-touch.
+            ts = getattr(row, "updated_at", None)
+            if ts is not None:
+                summary_text = f"[Prior session, {ts:%Y-%m-%d}] {summary_text}"
             hints.append(
                 MemoryHint(
                     hint_id=row.session_id,
                     layer="session",
                     time_scale="long_term",
-                    summary=summary_text[:200],
+                    summary=summary_text,
                     confidence=0.6,
                     relevance_score=0.6,
                     full_content_pointer=f"memory_session_summary:{row.session_id}",

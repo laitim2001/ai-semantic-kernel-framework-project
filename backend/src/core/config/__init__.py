@@ -190,6 +190,14 @@ class Settings(BaseSettings):
     # Env: CHAT_SESSION_SUMMARY.
     chat_session_summary: bool = True
 
+    # AD-Chat-Default-Persona-Demo-Leak (2026-07-15): the real-chat 主流量 default
+    # persona. False (production) → the clean DEFAULT_SYSTEM_PROMPT (a real enterprise
+    # assistant that USES injected memory + plans + grounds in knowledge). True →
+    # DEMO_SYSTEM_PROMPT ("Sprint 50.2 demonstration agent" + the echo/note/confidential
+    # drive-through triggers) so the 57.91/92/93 demo drive-through tests stay green
+    # WITHOUT leaking the demo persona to ordinary users. Env: CHAT_DEMO_MODE.
+    chat_demo_mode: bool = False
+
     # Sprint 57.152 §Memory combine extract + summarize
     # (AD-Memory-Formation-Combine-Extract-Summarize): when True (default), the
     # post-send MemoryFormationWorker makes ONE combined cheap-tier LLM call that

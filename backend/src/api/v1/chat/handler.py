@@ -172,6 +172,60 @@ DEMO_SYSTEM_PROMPT = (
     "For any other request, answer directly."
 )
 
+# === DEFAULT_SYSTEM_PROMPT: the clean production persona (AD-Chat-Default-Persona-Demo-Leak) ===
+# Why: the real-chat 主流量 fell back to DEMO_SYSTEM_PROMPT for every user without a
+# tenant agent_role — leaking a "Sprint 50.2 demonstration agent" identity + the
+# echo/note/confidential drive-through triggers into ordinary conversations (the
+# 2026-07-15 drive-through: the agent tagged personal facts "confidential" + denied
+# having chat history). It ALSO never taught the agent to USE its injected memory
+# (57.148 profile identity + 57.151 session recall), so it denied having memory and
+# confused prior-session content with the current session. This persona keeps the two
+# genuinely-production behaviours DEMO carried (write_todos planning + knowledge_search
+# grounding), ADDS explicit memory-usage guidance, and drops the demo identity /
+# confidential mandate / echo/note. The demo persona survives behind CHAT_DEMO_MODE
+# (see _default_persona) so the 57.91/92/93 drive-through tests keep their triggers.
+DEFAULT_SYSTEM_PROMPT = (
+    "You are an enterprise AI assistant working as a professional teammate: you "
+    "plan before acting, remember prior context, use tools to take real actions, "
+    "and are transparent about what you know and what you don't.\n\n"
+    "MEMORY: Your context may include (a) durable facts about the user (their name, "
+    "role, ongoing projects) and (b) short summaries of your PRIOR sessions with "
+    "them. When the user asks who they are, who you are to them, or what you worked "
+    "on together before, ANSWER from that injected memory — do NOT claim you have no "
+    "memory or no access to history. You do not keep the verbatim transcript of past "
+    "sessions, only these summaries; if asked for exact past wording, say so plainly "
+    "but still give what the summaries contain, and distinguish a PRIOR session from "
+    "the current one by its date. Treat injected memory as belonging to THIS user; do "
+    "not label it 'confidential' unless it is genuinely sensitive.\n\n"
+    "PLANNING: For any MULTI-STEP task, FIRST call the `write_todos` tool to lay out "
+    "a plan of 3 or more todos, then update each todo's status (pending -> in_progress "
+    "-> completed) by calling `write_todos` again with the WHOLE updated list as you "
+    "finish each step. Use the plan as your single source of truth — do not keep a "
+    "separate prose checklist.\n\n"
+    "KNOWLEDGE: For questions about company knowledge or internal documents, FIRST "
+    "call the `knowledge_search` tool, then ground your answer in the returned "
+    "snippets and cite their source paths. Do not answer company-knowledge questions "
+    "from memory alone.\n\n"
+    "For any other request, answer directly and concisely."
+)
+
+
+def _default_persona() -> str:
+    """The 主流量 default system prompt: clean production persona, or demo when gated.
+
+    Why (AD-Chat-Default-Persona-Demo-Leak): production users must get
+    DEFAULT_SYSTEM_PROMPT (a real assistant that uses injected memory). The demo
+    persona — DEMO_SYSTEM_PROMPT, which carries the echo/note/confidential
+    drive-through triggers — is returned only when CHAT_DEMO_MODE is on, so the
+    57.91/92/93 demo drive-through tests keep working without the demo identity
+    leaking to ordinary users. Read at call time (not import) so tests can flip the
+    flag per-case via get_settings().
+    """
+    from core.config import get_settings
+
+    return DEMO_SYSTEM_PROMPT if get_settings().chat_demo_mode else DEFAULT_SYSTEM_PROMPT
+
+
 # Sprint 57.94 (地基 A payoff): the FORK / AS_TOOL child loop persona + turn cap.
 # A child runs a real multi-turn TAO loop with a recursion-safe tool subset
 # (no task_spawn / handoff). A small turn cap bounds it; the SubagentBudget caps
@@ -1003,8 +1057,9 @@ async def resolve_session_persona(
 
     Returns the target persona's system prompt when the session row carries an
     `agent_role` that resolves in the persona registry; otherwise (no DB /
-    missing row / no agent_role / unknown persona / lookup error) returns
-    DEMO_SYSTEM_PROMPT.
+    missing row / no agent_role / unknown persona / lookup error) returns the
+    default persona (`_default_persona()` — the clean production prompt, or the
+    demo persona when CHAT_DEMO_MODE is on).
 
     Sprint 57.69 A-3b slice 2: when the session also carries a
     meta_data["carried_context"] (the parent's conversation captured at
@@ -1014,7 +1069,7 @@ async def resolve_session_persona(
     persona (the persona prompt is returned without the block on any render error).
     """
     if db is None or session_id is None or tenant_id is None:
-        return DEMO_SYSTEM_PROMPT
+        return _default_persona()
     try:
         from infrastructure.db.repositories.session_repository import SessionRepository
         from platform_layer.handoff.context_carry import render_carried_context_block
@@ -1024,15 +1079,15 @@ async def resolve_session_persona(
             session_id=session_id, tenant_id=tenant_id
         )
         if session is None:
-            return DEMO_SYSTEM_PROMPT
+            return _default_persona()
         meta = session.meta_data or {}
         agent_role = meta.get("agent_role")
         if not agent_role:
-            return DEMO_SYSTEM_PROMPT
+            return _default_persona()
         # Sprint 57.70: per-tenant DB catalog → hardcoded defaults → None
         # (async, tenant-scoped). db + tenant_id are non-None here (guarded above).
         persona = await resolve_persona(db, tenant_id, str(agent_role))
-        prompt = persona if persona is not None else DEMO_SYSTEM_PROMPT
+        prompt = persona if persona is not None else _default_persona()
 
         # Append the carried parent conversation (if any) to the persona prompt.
         # Nested fail-open: a malformed carried_context must not crash resolution
@@ -1047,4 +1102,4 @@ async def resolve_session_persona(
                 return prompt
         return prompt
     except Exception:  # noqa: BLE001
-        return DEMO_SYSTEM_PROMPT
+        return _default_persona()

@@ -31,7 +31,12 @@ from uuid import UUID, uuid4
 import pytest
 
 import api.v1.chat.handler as handler_mod
-from api.v1.chat.handler import DEMO_SYSTEM_PROMPT, resolve_session_persona
+from api.v1.chat.handler import (
+    DEFAULT_SYSTEM_PROMPT,
+    DEMO_SYSTEM_PROMPT,
+    _default_persona,
+    resolve_session_persona,
+)
 from platform_layer.handoff.context_carry import _CARRIED_CONTEXT_HEADER
 
 # ============================================================
@@ -85,34 +90,85 @@ async def test_persona_resolves_target_role(monkeypatch: pytest.MonkeyPatch) -> 
 
 @pytest.mark.asyncio
 async def test_persona_falls_back_when_no_agent_role(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A session without agent_role → DEMO_SYSTEM_PROMPT."""
+    """A session without agent_role → DEFAULT_SYSTEM_PROMPT (production default).
+
+    AD-Chat-Default-Persona-Demo-Leak: the fallback is now the clean production
+    persona (not the demo one) when CHAT_DEMO_MODE is off — see the demo-mode test.
+    """
+    _patch_repo(monkeypatch, returns=_FakeSessionRow({}))
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt == DEFAULT_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_session_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No session row → DEFAULT_SYSTEM_PROMPT (production default)."""
+    _patch_repo(monkeypatch, returns=None)
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt == DEFAULT_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_unknown_role(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unknown agent_role → DEFAULT_SYSTEM_PROMPT (persona registry miss)."""
+    _patch_repo(monkeypatch, returns=_FakeSessionRow({"agent_role": "nope-not-real"}))
+    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
+    assert prompt == DEFAULT_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_when_no_db() -> None:
+    """No db / session_id / tenant_id → DEFAULT_SYSTEM_PROMPT (production default)."""
+    assert await resolve_session_persona(None, uuid4(), uuid4()) == DEFAULT_SYSTEM_PROMPT
+    assert await resolve_session_persona(object(), None, uuid4()) == DEFAULT_SYSTEM_PROMPT
+    assert await resolve_session_persona(object(), uuid4(), None) == DEFAULT_SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_persona_falls_back_to_demo_when_demo_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CHAT_DEMO_MODE on → fallback returns DEMO_SYSTEM_PROMPT.
+
+    AD-Chat-Default-Persona-Demo-Leak: the demo persona (with its echo/note/
+    confidential drive-through triggers) survives behind the flag so the
+    57.91/92/93 demo drive-through paths keep working; ordinary production users
+    (flag off, the other tests above) get DEFAULT_SYSTEM_PROMPT instead.
+    """
+    import core.config as config_mod
+
+    class _FakeSettings:
+        chat_demo_mode = True
+
+    monkeypatch.setattr(config_mod, "get_settings", lambda: _FakeSettings())
+    # _default_persona() reads the flag at call time (lazy import), so patching the
+    # module symbol flips both it and the resolve_session_persona fallback.
+    assert _default_persona() == DEMO_SYSTEM_PROMPT
     _patch_repo(monkeypatch, returns=_FakeSessionRow({}))
     prompt = await resolve_session_persona(object(), uuid4(), uuid4())
     assert prompt == DEMO_SYSTEM_PROMPT
 
 
-@pytest.mark.asyncio
-async def test_persona_falls_back_when_session_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No session row → DEMO_SYSTEM_PROMPT."""
-    _patch_repo(monkeypatch, returns=None)
-    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
-    assert prompt == DEMO_SYSTEM_PROMPT
+def test_default_system_prompt_is_clean_production_persona() -> None:
+    """DEFAULT_SYSTEM_PROMPT keeps production behaviours + memory guidance, drops demo.
 
-
-@pytest.mark.asyncio
-async def test_persona_falls_back_when_unknown_role(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An unknown agent_role → DEMO_SYSTEM_PROMPT (persona registry miss)."""
-    _patch_repo(monkeypatch, returns=_FakeSessionRow({"agent_role": "nope-not-real"}))
-    prompt = await resolve_session_persona(object(), uuid4(), uuid4())
-    assert prompt == DEMO_SYSTEM_PROMPT
-
-
-@pytest.mark.asyncio
-async def test_persona_falls_back_when_no_db() -> None:
-    """No db / session_id / tenant_id → DEMO_SYSTEM_PROMPT (ordinary session)."""
-    assert await resolve_session_persona(None, uuid4(), uuid4()) == DEMO_SYSTEM_PROMPT
-    assert await resolve_session_persona(object(), None, uuid4()) == DEMO_SYSTEM_PROMPT
-    assert await resolve_session_persona(object(), uuid4(), None) == DEMO_SYSTEM_PROMPT
+    AD-Chat-Default-Persona-Demo-Leak: the production default must (a) keep the two
+    genuinely-production behaviours DEMO also carried, (b) ADD the memory-usage
+    guidance that fixes the drive-through gap (agent denied having memory), and
+    (c) DROP the demo identity / confidential mandate / echo-note triggers.
+    """
+    p = DEFAULT_SYSTEM_PROMPT
+    # (a) keeps genuinely-production behaviours
+    assert "write_todos" in p
+    assert "knowledge_search" in p
+    # (b) ADDS memory-usage guidance (the drive-through fix)
+    assert "MEMORY" in p
+    assert "do NOT claim you have no memory" in p
+    assert "not label it 'confidential'" in p  # anti-over-tagging guidance
+    # (c) DROPS the demo pollution
+    assert "demonstration agent" not in p
+    assert "echo_tool" not in p
+    assert "MUST contain the word 'confidential'" not in p  # the demo mandate is gone
 
 
 # === Sprint 57.69 A-3b slice 2: carried_context appended to persona ==========
